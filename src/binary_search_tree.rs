@@ -68,30 +68,38 @@ impl BSTree {
             return false;
         }
 
-        let mut node = self.root;
-        let mut prev = self.root.unwrap();
+        let mut node = self.root.as_mut();
 
-        while let Some(n) = node {
-            // Found the node to remove.
-            //
-            // Actor invovled: Node Parents and Children
+        while let Some(n) = node.take() {
+            // n.val == val will match if it's root.
             if n.val == val {
-                if let Some(left) = &prev.left {
-                    if left.val == val {
-                        prev.left = n.left.take()
-                    }
-                }
-
+                let right = n.right.take();
+                *n = n.left.take().unwrap();
+                n.right = right;
                 return true;
             }
 
             if n.val > val {
-                node = n.left;
+                if let Some(x) = n.left.as_mut() {
+                    if x.val == val {
+                        n.left = x.left.take();
+                        n.left.take();
+                        return true;
+                    } else {
+                        node = n.left.as_mut();
+                    }
+                }
             } else {
-                node = n.right;
+                if let Some(x) = n.right.as_mut() {
+                    if x.val == val {
+                        n.right = x.right.take();
+                        n.right.take();
+                        return true;
+                    } else {
+                        node = n.right.as_mut();
+                    }
+                }
             }
-
-            prev = n;
         }
 
         false
@@ -126,7 +134,7 @@ impl BSTree {
 
         while !queue.is_empty() {
             if let Some(n) = queue.pop_front() {
-                println!("{}", n.val);
+                print!("{} ", n.val);
 
                 if let Some(left) = &n.left {
                     queue.push_back(left);
@@ -137,6 +145,8 @@ impl BSTree {
                 }
             }
         }
+
+        println!("");
     }
 }
 
@@ -158,8 +168,12 @@ mod test {
         assert_eq!(tree.get(&3), Some(&3));
         assert_eq!(tree.get(&6), None);
 
+        tree.print();
         assert_eq!(tree.remove(2), true);
-        assert_eq!(tree.get(&2), None);
+        assert_eq!(tree.remove(4), true);
+        // assert_eq!(tree.remove(3), true);
+        tree.print();
+        // assert_eq!(tree.get(&2), None);
     }
 
     // tree.insert(8);
