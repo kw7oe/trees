@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 
 type Link = Option<Box<Node>>;
 
+#[derive(Clone)]
 struct Node {
     val: i32,
     left: Link,
@@ -11,6 +12,79 @@ struct Node {
 pub struct BSTree {
     root: Link,
     size: u32,
+}
+
+impl Node {
+    pub fn print(&self) {
+        if let Some(left) = self.left.as_ref() {
+            left.print();
+        }
+
+        print!("{} ", self.val);
+
+        if let Some(right) = self.right.as_ref() {
+            right.print();
+        }
+    }
+}
+
+fn remove(mut this: Box<Node>, val: i32) -> Option<Box<Node>> {
+    if this.val == val {
+        match (this.right.take(), this.left.take()) {
+            (None, None) => None,
+            (Some(right), Some(mut left)) => {
+                if let Some(mut r) = left.right.as_ref() {
+                    let mut current = left.clone();
+
+                    while let Some(right) = r.right.as_ref() {
+                        current = r.clone();
+                        r = right;
+                    }
+
+                    // Take out our rightmost child from it parents.
+                    let mut rightmost = current.right.take().unwrap();
+
+                    // If rightmost child have left child,
+                    // we will need to move to it to be our parent right child.
+                    //
+                    // This is because we will be moving our rightmost child
+                    // and assign both left and right child from our deleted node.
+                    // So, if we didn't reassign, the left child will be abondon
+                    // and replaced by our deleted node left child.
+                    //
+                    // We are not checking for right child because we are getting our
+                    // rightmost child, so it is not possible to have right child.
+                    if let Some(left) = rightmost.left.take() {
+                        current.right = Some(left);
+                    }
+
+                    // Assign our deleted node right and left child
+                    // to our rightmost child.
+                    rightmost.left = Some(current);
+                    rightmost.right = Some(right);
+
+                    Some(rightmost)
+                } else {
+                    left.right = Some(right);
+                    Some(left)
+                }
+            }
+            (Some(right), None) => Some(right),
+            (None, Some(left)) => Some(left),
+        }
+    } else if val > this.val {
+        if let Some(node) = this.right.take() {
+            this.right = remove(node, val);
+        }
+
+        Some(this)
+    } else {
+        if let Some(node) = this.left.take() {
+            this.left = remove(node, val);
+        }
+
+        Some(this)
+    }
 }
 
 impl BSTree {
@@ -63,46 +137,10 @@ impl BSTree {
         val
     }
 
-    pub fn remove(&mut self, val: i32) -> bool {
-        if self.root.is_none() {
-            return false;
+    pub fn remove(&mut self, val: i32) {
+        if let Some(node) = self.root.take() {
+            self.root = remove(node, val);
         }
-
-        let mut node = self.root.as_mut();
-
-        while let Some(n) = node.take() {
-            // n.val == val will match if it's root.
-            if n.val == val {
-                let right = n.right.take();
-                *n = n.left.take().unwrap();
-                n.right = right;
-                return true;
-            }
-
-            if n.val > val {
-                if let Some(x) = n.left.as_mut() {
-                    if x.val == val {
-                        n.left = x.left.take();
-                        n.left.take();
-                        return true;
-                    } else {
-                        node = n.left.as_mut();
-                    }
-                }
-            } else {
-                if let Some(x) = n.right.as_mut() {
-                    if x.val == val {
-                        n.right = x.right.take();
-                        n.right.take();
-                        return true;
-                    } else {
-                        node = n.right.as_mut();
-                    }
-                }
-            }
-        }
-
-        false
     }
 
     pub fn get(&self, val: &i32) -> Option<&i32> {
@@ -124,29 +162,10 @@ impl BSTree {
     }
 
     pub fn print(&self) {
-        if self.root.is_none() {
-            println!("None");
+        if let Some(node) = &self.root {
+            node.print();
+            println!("");
         }
-
-        let mut queue: VecDeque<&Box<Node>> = VecDeque::new();
-        let node = self.root.as_ref().unwrap();
-        queue.push_back(node);
-
-        while !queue.is_empty() {
-            if let Some(n) = queue.pop_front() {
-                print!("{} ", n.val);
-
-                if let Some(left) = &n.left {
-                    queue.push_back(left);
-                }
-
-                if let Some(right) = &n.right {
-                    queue.push_back(right);
-                }
-            }
-        }
-
-        println!("");
     }
 }
 
@@ -159,21 +178,23 @@ mod test {
         let mut tree = BSTree::new();
 
         assert_eq!(tree.insert(2), 2);
-        assert_eq!(tree.insert(3), 3);
-        assert_eq!(tree.insert(5), 5);
+        assert_eq!(tree.insert(7), 7);
+        assert_eq!(tree.insert(8), 8);
+        assert_eq!(tree.insert(9), 9);
         assert_eq!(tree.insert(4), 4);
+        assert_eq!(tree.insert(6), 6);
         assert_eq!(tree.insert(1), 1);
 
+        assert_eq!(tree.insert(5), 5);
+
         assert_eq!(tree.get(&2), Some(&2));
-        assert_eq!(tree.get(&3), Some(&3));
-        assert_eq!(tree.get(&6), None);
+        assert_eq!(tree.get(&5), Some(&5));
+        assert_eq!(tree.get(&10), None);
 
         tree.print();
-        assert_eq!(tree.remove(2), true);
-        assert_eq!(tree.remove(4), true);
-        // assert_eq!(tree.remove(3), true);
+        tree.remove(7);
         tree.print();
-        // assert_eq!(tree.get(&2), None);
+        assert_eq!(tree.get(&7), None);
     }
 
     // tree.insert(8);
