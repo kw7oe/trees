@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 type Link = Option<Box<Node>>;
 
 #[derive(Clone)]
@@ -191,9 +189,9 @@ mod test {
         assert_eq!(tree.get(&5), Some(&5));
         assert_eq!(tree.get(&10), None);
 
-        tree.print();
+        // tree.print();
         tree.remove(7);
-        tree.print();
+        // tree.print();
         assert_eq!(tree.get(&7), None);
     }
 
