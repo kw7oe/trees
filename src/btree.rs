@@ -2,6 +2,7 @@ pub struct BTree {
     root: Option<Box<Node>>,
 }
 
+#[derive(Debug)]
 struct Node {
     numbers_of_keys: u32,      // 2t ^ h - 1.
     keys: Vec<u32>,            // At least t - 1 keys, at most 2t - 1 keys
@@ -20,6 +21,28 @@ impl Node {
             childrens: Vec::new(),
             is_leaf,
         }
+    }
+
+    pub fn split_child(&mut self, index: usize) {
+        // Currently works for split root node only.
+        if let Some(child) = self.childrens.get_mut(index) {
+            let mut new_node = Self::new(child.is_leaf);
+            let new_node_number_of_keys = MINIMUM_DEGREE - 1;
+            new_node.numbers_of_keys = new_node_number_of_keys;
+
+            // Split keys to new node
+            for _ in 0..new_node_number_of_keys {
+                if let Some(key) = child.keys.pop() {
+                    new_node.keys.push(key);
+                    child.numbers_of_keys -= 1;
+                }
+            }
+
+            // Split childs to new node if not leaf node
+
+            // Now assign both nodes to parents
+            self.childrens.push(Box::new(new_node));
+        };
     }
 
     pub fn insert_non_full(&mut self, key: u32) {
@@ -42,6 +65,11 @@ impl BTree {
     pub fn insert(&mut self, key: u32) {
         if let Some(node) = &mut self.root {
             if node.numbers_of_keys == MAX_DEGREE {
+                let mut new_root = Node::new(false);
+                new_root.childrens.push(self.root.take().unwrap());
+                new_root.split_child(0);
+                new_root.insert_non_full(key);
+                self.root = Some(Box::new(new_root));
             } else {
                 node.insert_non_full(key);
             }
@@ -65,6 +93,15 @@ impl BTree {
             None
         }
     }
+
+    pub fn print(&self) {
+        if let Some(node) = &self.root {
+            println!("{:?}", node);
+            for n in &node.childrens {
+                println!("{:?}", n);
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -78,11 +115,13 @@ mod test {
         tree.insert(7);
         tree.insert(8);
         tree.insert(9);
-        tree.insert(4);
-        tree.insert(6);
-        tree.insert(1);
+        // tree.insert(4);
+        // tree.insert(6);
+        // tree.insert(1);
 
-        tree.insert(5);
+        // tree.insert(5);
+
+        tree.print();
 
         assert_eq!(tree.get(&2), Some(&2));
         assert_eq!(tree.get(&7), Some(&7));
