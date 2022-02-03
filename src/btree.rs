@@ -10,6 +10,29 @@ struct Node {
 }
 
 const MINIMUM_DEGREE: u32 = 2; // t
+const MAX_DEGREE: u32 = 2 * MINIMUM_DEGREE - 1;
+
+impl Node {
+    pub fn new(is_leaf: bool) -> Self {
+        Node {
+            numbers_of_keys: 0,
+            keys: vec![],
+            childrens: Vec::new(),
+            is_leaf,
+        }
+    }
+
+    pub fn insert_non_full(&mut self, key: u32) {
+        match self.keys.binary_search(&key) {
+            Ok(_) => (),
+            Err(pos) => {
+                self.keys.insert(pos, key);
+            }
+        }
+
+        self.numbers_of_keys += 1;
+    }
+}
 
 impl BTree {
     pub fn new() -> BTree {
@@ -18,23 +41,17 @@ impl BTree {
 
     pub fn insert(&mut self, key: u32) {
         if let Some(node) = &mut self.root {
-            if node.numbers_of_keys < 2 * MINIMUM_DEGREE - 1 {
-                // TODO: Implement insert when root is not full
-                println!("insert {} into root", key);
-                node.numbers_of_keys += 1;
+            if node.numbers_of_keys == MAX_DEGREE {
             } else {
-                // TODO: Implement insert when root is full
+                node.insert_non_full(key);
             }
         } else {
-            let node = Node {
-                numbers_of_keys: 1,
-                keys: vec![key],
-                childrens: Vec::new(),
-                is_leaf: false,
-            };
+            let mut node = Node::new(false);
+            node.insert_non_full(key);
             self.root = Some(Box::new(node));
         }
     }
+
     pub fn remove(&mut self, key: &u32) -> Option<u32> {
         Some(*key)
     }
@@ -68,6 +85,9 @@ mod test {
         tree.insert(5);
 
         assert_eq!(tree.get(&2), Some(&2));
+        assert_eq!(tree.get(&7), Some(&7));
+        assert_eq!(tree.get(&8), Some(&8));
+        assert_eq!(tree.get(&9), Some(&9));
         // assert_eq!(tree.get(&5), Some(&5));
         // assert_eq!(tree.get(&10), None);
 
