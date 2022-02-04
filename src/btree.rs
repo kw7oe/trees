@@ -27,18 +27,8 @@ impl Node {
         let mut index = 0;
         let mut node_key = self.keys[index];
 
-        // println!(
-        //     "index: {}, key: {}, node_key: {}, nok: {}",
-        //     index, key, node_key, self.numbers_of_keys
-        // );
-
         while *key > node_key {
             index += 1;
-
-            // println!(
-            //     "index: {}, key: {}, node_key: {}, nok: {}",
-            //     index, key, node_key, self.numbers_of_keys
-            // );
 
             if index >= self.numbers_of_keys {
                 break;
@@ -53,35 +43,45 @@ impl Node {
             return None;
         } else {
             let next_node = &self.childrens[index];
-            // println!("------\nGo to: {:?}", next_node);
             return next_node.search(key);
         }
     }
 
     pub fn split_child(&mut self, index: usize) {
-        // Currently works for split root node only.
         if let Some(child) = self.childrens.get_mut(index) {
             let mut new_node = Self::new(child.is_leaf);
             let new_node_number_of_keys = MINIMUM_DEGREE - 1;
             new_node.numbers_of_keys = new_node_number_of_keys;
 
-            // Split keys to new node
-            for _ in 0..new_node_number_of_keys {
-                if let Some(key) = child.keys.pop() {
-                    new_node.keys.push(key);
-                    child.numbers_of_keys -= 1;
+            // Move keys[t..] to new node
+            // for j = 1 to t - 1
+            //   z.key(k) = y.key(j + t)
+            // y.n = t - 1
+            for j in 0..new_node_number_of_keys {
+                let key = child.keys.remove(MINIMUM_DEGREE);
+                new_node.keys.insert(j, key);
+                child.numbers_of_keys -= 1;
+            }
+
+            // Move childrens[t..] to new node if not leaf node
+            // if not y.leaf
+            //   for j = 1 to t
+            //     z.c(j) = y.c(j+t)
+            if !child.is_leaf {
+                for j in 0..MINIMUM_DEGREE {
+                    let nodes = child.childrens.remove(MINIMUM_DEGREE);
+                    new_node.childrens.insert(j, nodes);
                 }
             }
 
             // x.key(i) = y.key(t)
-            // where t = MINIMUM_DEGREE
             if let Some(key) = child.keys.pop() {
                 self.keys.insert(index, key);
                 child.numbers_of_keys -= 1;
             }
 
-            // Split childs to new node if not leaf node
-            self.childrens.push(Box::new(new_node));
+            // x.c(i+1) = z
+            self.childrens.insert(index + 1, Box::new(new_node));
 
             // x.n = x.n + 1
             self.numbers_of_keys += 1;
@@ -110,14 +110,14 @@ impl Node {
             }
 
             if self.childrens[index].numbers_of_keys == MAX_DEGREE {
-                // Split again
+                self.split_child(index);
 
                 if key > self.keys[index] {
                     index += 1
                 }
-            } else {
-                self.childrens[index].insert_non_full(key)
             }
+
+            self.childrens[index].insert_non_full(key)
         }
     }
 }
@@ -171,6 +171,9 @@ impl BTree {
 mod test {
     use super::BTree;
 
+    // TODO: Write more test cases for more specific conditions
+    // instead of a basic one.
+
     #[test]
     fn basics() {
         let mut tree = BTree::new();
@@ -179,10 +182,13 @@ mod test {
         tree.insert(8);
         tree.insert(9);
         tree.insert(4);
-        // tree.insert(6);
-        // tree.insert(1);
-
+        tree.insert(6);
+        tree.insert(1);
         tree.insert(5);
+        tree.insert(3);
+        tree.insert(10);
+        tree.insert(11);
+        tree.insert(14);
 
         tree.print();
 
@@ -191,7 +197,9 @@ mod test {
         assert_eq!(tree.get(&8), Some(&8));
         assert_eq!(tree.get(&9), Some(&9));
         assert_eq!(tree.get(&5), Some(&5));
-        assert_eq!(tree.get(&10), None);
+        assert_eq!(tree.get(&10), Some(&10));
+        assert_eq!(tree.get(&4), Some(&4));
+        assert_eq!(tree.get(&12), None);
 
         // tree.remove(&7);
         // assert_eq!(tree.get(&7), None);
