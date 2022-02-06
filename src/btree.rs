@@ -120,6 +120,15 @@ impl Node {
             self.childrens[index].insert_non_full(key)
         }
     }
+
+    pub fn remove(&mut self, key: &u32) -> Option<u32> {
+        if let Ok(index) = self.keys.binary_search(key) {
+            let key = self.keys.remove(index);
+            Some(key)
+        } else {
+            None
+        }
+    }
 }
 
 impl BTree {
@@ -146,14 +155,7 @@ impl BTree {
     }
 
     pub fn remove(&mut self, key: &u32) -> Option<u32> {
-        self.root.as_mut().map_or(None, |node| {
-            if let Ok(index) = node.keys.binary_search(key) {
-                let key = node.keys.remove(index);
-                Some(key)
-            } else {
-                None
-            }
-        })
+        self.root.as_mut().map_or(None, |node| node.remove(key))
     }
 
     pub fn get(&self, key: &u32) -> Option<&u32> {
@@ -177,9 +179,6 @@ impl BTree {
 #[cfg(test)]
 mod test {
     use super::BTree;
-
-    // TODO: Write more test cases for more specific conditions
-    // instead of a basic one.
 
     #[test]
     #[ignore]
