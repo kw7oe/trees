@@ -122,11 +122,92 @@ impl Node {
     }
 
     pub fn remove(&mut self, key: &u32) -> Option<u32> {
-        if let Ok(index) = self.keys.binary_search(key) {
-            let key = self.keys.remove(index);
-            Some(key)
-        } else {
-            None
+        match self.keys.binary_search(key) {
+            Ok(index) => {
+                if self.is_leaf {
+                    let key = self.keys.remove(index);
+                    self.numbers_of_keys -= 1;
+                    Some(key)
+                } else {
+                    if self.childrens[index].numbers_of_keys >= MINIMUM_DEGREE {
+                        //     4  |  7
+                        //    /   |   \
+                        //   1|2  6  8|9
+                        //
+                        // Delete 4:
+                        //
+                        //     2  |  7
+                        //    /   |   \
+                        //   1    6   8|9
+                        let k1 = self.childrens[index].keys.pop().unwrap();
+                        self.childrens[index].numbers_of_keys -= 1;
+                        let key = self.keys.remove(index);
+                        self.keys.insert(index, k1);
+                        Some(key)
+                    } else if self.childrens[index + 1].numbers_of_keys >= MINIMUM_DEGREE {
+                        //     4  |  7
+                        //    /   |   \
+                        //   1   5|6  8|9
+                        //
+                        // Delete 4:
+                        //
+                        //     5  |  7
+                        //    /   |   \
+                        //   1    6  8|9
+                        let k1 = self.childrens[index + 1].keys.remove(0);
+                        self.childrens[index].numbers_of_keys -= 1;
+                        let key = self.keys.remove(index);
+                        self.keys.insert(index, k1);
+                        Some(key)
+                    } else {
+                        // Merge both child
+                        //     4  |  7
+                        //    /   |   \
+                        //   1    6  8|9
+                        //
+                        // Delete 4:
+                        //
+                        //         7
+                        //     /      \
+                        //   1|4|6    8|9
+                        //
+                        //        7
+                        //      /   \
+                        //    1|6   8|9
+
+                        // Get left and right child
+                        let left = self.childrens.remove(0);
+                        let mut right = self.childrens.remove(0);
+
+                        // Merge the keys
+                        let mut new_keys = left.keys;
+                        new_keys.push(*key);
+                        new_keys.append(&mut right.keys);
+
+                        // TODO: Do we need to merge childrens?
+
+                        let node = Node {
+                            numbers_of_keys: left.numbers_of_keys + right.numbers_of_keys + 1,
+                            is_leaf: left.is_leaf,
+                            keys: new_keys,
+                            childrens: Vec::new(),
+                        };
+
+                        self.keys.remove(index);
+                        self.numbers_of_keys -= 1;
+
+                        self.childrens.insert(index, Box::new(node));
+                        self.childrens[index].remove(key)
+                    }
+                }
+            }
+            Err(index) => {
+                if self.is_leaf {
+                    None
+                } else {
+                    self.childrens[index].remove(key)
+                }
+            }
         }
     }
 }
@@ -181,7 +262,6 @@ mod test {
     use super::BTree;
 
     #[test]
-    #[ignore]
     fn basics() {
         let mut tree = BTree::new();
         tree.insert(2);
@@ -197,8 +277,6 @@ mod test {
         tree.insert(11);
         tree.insert(14);
 
-        tree.print();
-
         assert_eq!(tree.get(&2), Some(&2));
         assert_eq!(tree.get(&7), Some(&7));
         assert_eq!(tree.get(&8), Some(&8));
@@ -207,19 +285,90 @@ mod test {
         assert_eq!(tree.get(&10), Some(&10));
         assert_eq!(tree.get(&4), Some(&4));
         assert_eq!(tree.get(&12), None);
+
+        assert_eq!(tree.remove(&4), Some(4));
+        assert_eq!(tree.get(&5), Some(&5));
+        assert_eq!(tree.get(&4), None);
+
+        tree.print();
     }
 
     #[test]
-    fn delete_on_root_node() {
+    fn delete_key_on_root_node() {
         let mut tree = BTree::new();
         tree.insert(2);
         tree.insert(7);
         tree.insert(8);
 
-        tree.print();
         assert_eq!(tree.remove(&7), Some(7));
         assert_eq!(tree.remove(&8), Some(8));
         assert_eq!(tree.remove(&1), None);
         assert_eq!(tree.remove(&8), None);
+    }
+
+    #[test]
+    fn delete_leaf_on_two_leaf_node() {
+        let mut tree = BTree::new();
+        tree.insert(2);
+        tree.insert(7);
+        tree.insert(8);
+        tree.insert(9);
+        tree.insert(4);
+
+        assert_eq!(tree.remove(&4), Some(4));
+        assert_eq!(tree.remove(&9), Some(9));
+        assert_eq!(tree.remove(&5), None);
+    }
+
+    #[test]
+    fn delete_key_on_internal_node_case_a() {
+        let mut tree = BTree::new();
+        tree.insert(2);
+        tree.insert(7);
+        tree.insert(8);
+        tree.insert(9);
+        tree.insert(4);
+        tree.insert(6);
+        tree.insert(1);
+
+        // Actual case a
+        assert_eq!(tree.remove(&4), Some(4));
+    }
+
+    #[test]
+    fn delete_key_on_internal_node_case_b() {
+        let mut tree = BTree::new();
+        tree.insert(2);
+        tree.insert(7);
+        tree.insert(8);
+        tree.insert(9);
+        tree.insert(4);
+        tree.insert(6);
+        tree.insert(1);
+        tree.insert(5);
+
+        assert_eq!(tree.remove(&2), Some(2));
+
+        // Actual case b
+        assert_eq!(tree.remove(&4), Some(4));
+    }
+
+    #[test]
+    fn delete_key_on_internal_node_case_c() {
+        let mut tree = BTree::new();
+        tree.insert(2);
+        tree.insert(7);
+        tree.insert(8);
+        tree.insert(9);
+        tree.insert(4);
+        tree.insert(6);
+        tree.insert(1);
+        tree.insert(5);
+
+        assert_eq!(tree.remove(&2), Some(2));
+        assert_eq!(tree.remove(&5), Some(5));
+
+        // Actual case c
+        assert_eq!(tree.remove(&4), Some(4));
     }
 }
