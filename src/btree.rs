@@ -146,7 +146,14 @@ impl BTree {
     }
 
     pub fn remove(&mut self, key: &u32) -> Option<u32> {
-        Some(*key)
+        self.root.as_mut().map_or(None, |node| {
+            if let Ok(index) = node.keys.binary_search(key) {
+                let key = node.keys.remove(index);
+                Some(key)
+            } else {
+                None
+            }
+        })
     }
 
     pub fn get(&self, key: &u32) -> Option<&u32> {
@@ -175,6 +182,7 @@ mod test {
     // instead of a basic one.
 
     #[test]
+    #[ignore]
     fn basics() {
         let mut tree = BTree::new();
         tree.insert(2);
@@ -200,8 +208,19 @@ mod test {
         assert_eq!(tree.get(&10), Some(&10));
         assert_eq!(tree.get(&4), Some(&4));
         assert_eq!(tree.get(&12), None);
+    }
 
-        // tree.remove(&7);
-        // assert_eq!(tree.get(&7), None);
+    #[test]
+    fn delete_on_root_node() {
+        let mut tree = BTree::new();
+        tree.insert(2);
+        tree.insert(7);
+        tree.insert(8);
+
+        tree.print();
+        assert_eq!(tree.remove(&7), Some(7));
+        assert_eq!(tree.remove(&8), Some(8));
+        assert_eq!(tree.remove(&1), None);
+        assert_eq!(tree.remove(&8), None);
     }
 }
