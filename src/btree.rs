@@ -129,6 +129,9 @@ impl Node {
                     self.numbers_of_keys -= 1;
                     Some(key)
                 } else {
+                    // Currently does not work for BTree where h > 3,
+                    // as the implementation does not recursively look into
+                    // the other subtree.
                     if self.childrens[index].numbers_of_keys >= MINIMUM_DEGREE {
                         //     4  |  7
                         //    /   |   \
