@@ -142,6 +142,17 @@ impl Node {
                         //     2  |  7
                         //    /   |   \
                         //   1    6   8|9
+
+                        // Recursively find the biggest left children to be swap:
+                        let mut left_child_biggest = &self.childrens[index];
+
+                        while let Some(node) = left_child_biggest.childrens.last() {
+                            left_child_biggest = node;
+                        }
+
+                        println!("Left child biggest: {:?}", left_child_biggest);
+                        println!("Current impl {:?}", self.childrens[index]);
+
                         let k1 = self.childrens[index].keys.pop().unwrap();
                         self.childrens[index].numbers_of_keys -= 1;
                         let key = self.keys.remove(index);
@@ -179,6 +190,7 @@ impl Node {
                         //    1|6   8|9
 
                         // Get left and right child
+
                         let left = self.childrens.remove(0);
                         let mut right = self.childrens.remove(0);
 
@@ -188,18 +200,23 @@ impl Node {
                         new_keys.append(&mut right.keys);
 
                         // TODO: Do we need to merge childrens?
+                        let mut left_chidrens = left.childrens;
+                        let mut right_childrens = right.childrens;
+                        left_chidrens.append(&mut right_childrens);
 
                         let node = Node {
                             numbers_of_keys: left.numbers_of_keys + right.numbers_of_keys + 1,
                             is_leaf: left.is_leaf,
                             keys: new_keys,
-                            childrens: Vec::new(),
+                            childrens: left_chidrens,
                         };
 
                         self.keys.remove(index);
                         self.numbers_of_keys -= 1;
 
                         self.childrens.insert(index, Box::new(node));
+
+                        // Recursively call remove
                         self.childrens[index].remove(key)
                     }
                 }
@@ -279,6 +296,16 @@ mod test {
         tree.insert(10);
         tree.insert(11);
         tree.insert(14);
+        // tree.insert(16);
+        // tree.insert(17);
+        // tree.insert(18);
+        // tree.insert(19);
+        // tree.insert(20);
+        // tree.insert(21);
+        // tree.insert(22);
+        // tree.insert(23);
+        // tree.insert(24);
+        // tree.insert(25);
 
         assert_eq!(tree.get(&2), Some(&2));
         assert_eq!(tree.get(&7), Some(&7));
@@ -289,9 +316,11 @@ mod test {
         assert_eq!(tree.get(&4), Some(&4));
         assert_eq!(tree.get(&12), None);
 
-        assert_eq!(tree.remove(&4), Some(4));
+        // assert_eq!(tree.remove(&4), Some(4));
         assert_eq!(tree.get(&5), Some(&5));
-        assert_eq!(tree.get(&4), None);
+        // assert_eq!(tree.get(&4), None);
+
+        assert_eq!(tree.remove(&7), Some(7));
 
         tree.print();
     }
