@@ -147,6 +147,7 @@ impl Node {
 
                         // Recursively find the biggest left children to be swap:
                         let mut left_child_biggest = &self.childrens[index];
+                        println!("self: {:?}", self);
 
                         while let Some(node) = left_child_biggest.childrens.last() {
                             left_child_biggest = node;
@@ -258,7 +259,17 @@ impl BTree {
     }
 
     pub fn remove(&mut self, key: &u32) -> Option<u32> {
-        self.root.as_mut().map_or(None, |node| node.remove(key))
+        if let Some(node) = self.root.as_mut() {
+            let result = node.remove(key);
+
+            if node.keys.is_empty() {
+                self.root = Some(node.childrens.remove(0));
+            }
+
+            result
+        } else {
+            None
+        }
     }
 
     pub fn get(&self, key: &u32) -> Option<&u32> {
@@ -340,13 +351,32 @@ mod test {
         assert_eq!(tree.get(&5), Some(&5));
         // assert_eq!(tree.get(&4), None);
 
-        // assert_eq!(tree.remove(&7), Some(7));
+        assert_eq!(tree.remove(&7), Some(7));
+        // assert_eq!(tree.remove(&16), Some(16));
 
         tree.print();
     }
 
     #[test]
-    #[ignore]
+    fn delete_key_on_root_node_with_internal_nodes() {
+        let mut tree = BTree::new();
+        tree.insert(2);
+        tree.insert(7);
+        tree.insert(8);
+        tree.insert(9);
+        tree.insert(4);
+        tree.insert(6);
+        tree.insert(1);
+        tree.insert(5);
+        tree.insert(3);
+        tree.insert(10);
+        tree.insert(11);
+        tree.insert(14);
+
+        assert_eq!(tree.remove(&7), Some(7));
+    }
+
+    #[test]
     fn delete_key_on_root_node() {
         let mut tree = BTree::new();
         tree.insert(2);
@@ -360,7 +390,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn delete_leaf_on_two_leaf_node() {
         let mut tree = BTree::new();
         tree.insert(2);
@@ -375,7 +404,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn delete_key_on_internal_node_case_a() {
         let mut tree = BTree::new();
         tree.insert(2);
@@ -391,7 +419,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn delete_key_on_internal_node_case_b() {
         let mut tree = BTree::new();
         tree.insert(2);
@@ -410,7 +437,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn delete_key_on_internal_node_case_c() {
         let mut tree = BTree::new();
         tree.insert(2);
