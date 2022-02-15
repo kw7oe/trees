@@ -124,6 +124,7 @@ impl Node {
     }
 
     pub fn remove(&mut self, key: &u32) -> Option<u32> {
+        println!("Removing {key} from {:?}...", self.keys);
         match self.keys.binary_search(key) {
             Ok(index) => {
                 if self.is_leaf {
@@ -146,20 +147,17 @@ impl Node {
                         //   1    6   8|9
 
                         // Recursively find the biggest left children to be swap:
-                        let mut left_child_biggest = &self.childrens[index];
-                        println!("self: {:?}", self);
+                        let mut most_left = &mut self.childrens[index];
 
-                        while let Some(node) = left_child_biggest.childrens.last() {
-                            left_child_biggest = node;
+                        while let Some(node) = most_left.childrens.last_mut() {
+                            most_left = node;
                         }
 
-                        println!("Left child biggest: {:?}", left_child_biggest);
-                        println!("Current impl {:?}", self.childrens[index]);
-
-                        let k1 = self.childrens[index].keys.pop().unwrap();
-                        self.childrens[index].numbers_of_keys -= 1;
+                        let k1 = most_left.keys.pop().unwrap();
+                        most_left.numbers_of_keys -= 1;
                         let key = self.keys.remove(index);
                         self.keys.insert(index, k1);
+
                         Some(key)
                     } else if self.childrens[index + 1].numbers_of_keys >= MINIMUM_DEGREE {
                         //     4  |  7
@@ -171,10 +169,17 @@ impl Node {
                         //     5  |  7
                         //    /   |   \
                         //   1    6  8|9
-                        let k1 = self.childrens[index + 1].keys.remove(0);
-                        self.childrens[index].numbers_of_keys -= 1;
+                        let mut most_right = &mut self.childrens[index + 1];
+
+                        while let Some(node) = most_right.childrens.first_mut() {
+                            most_right = node;
+                        }
+
+                        let k1 = most_right.keys.remove(0);
+                        most_right.numbers_of_keys -= 1;
                         let key = self.keys.remove(index);
                         self.keys.insert(index, k1);
+
                         Some(key)
                     } else {
                         // Merge both child
@@ -196,6 +201,8 @@ impl Node {
 
                         let left = self.childrens.remove(0);
                         let mut right = self.childrens.remove(0);
+
+                        println!("Merging {:?}, {key}, {:?}...", left.keys, right.keys);
 
                         // Merge the keys
                         let mut new_keys = left.keys;
@@ -337,6 +344,12 @@ mod test {
         tree.insert(23);
         tree.insert(24);
         tree.insert(25);
+        tree.insert(30);
+        tree.insert(31);
+        tree.insert(32);
+        tree.insert(33);
+        tree.insert(34);
+        tree.insert(35);
 
         assert_eq!(tree.get(&2), Some(&2));
         assert_eq!(tree.get(&7), Some(&7));
@@ -351,7 +364,8 @@ mod test {
         assert_eq!(tree.get(&5), Some(&5));
         // assert_eq!(tree.get(&4), None);
 
-        assert_eq!(tree.remove(&7), Some(7));
+        tree.print();
+        assert_eq!(tree.remove(&11), Some(11));
         // assert_eq!(tree.remove(&16), Some(16));
 
         tree.print();
