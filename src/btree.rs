@@ -132,10 +132,8 @@ impl Node {
                     self.numbers_of_keys -= 1;
                     Some(key)
                 } else {
-                    // Currently does not work for BTree where h > 3,
-                    // as the implementation does not recursively look into
-                    // the other subtree.
                     if self.childrens[index].numbers_of_keys >= MINIMUM_DEGREE {
+                        println!("Swap with left child...");
                         //     4  |  7
                         //    /   |   \
                         //   1|2  6  8|9
@@ -160,6 +158,7 @@ impl Node {
 
                         Some(key)
                     } else if self.childrens[index + 1].numbers_of_keys >= MINIMUM_DEGREE {
+                        println!("Swap with right child...");
                         //     4  |  7
                         //    /   |   \
                         //   1   5|6  8|9
@@ -209,7 +208,6 @@ impl Node {
                         new_keys.push(*key);
                         new_keys.append(&mut right.keys);
 
-                        // TODO: Do we need to merge childrens?
                         let mut left_chidrens = left.childrens;
                         let mut right_childrens = right.childrens;
                         left_chidrens.append(&mut right_childrens);
@@ -235,6 +233,21 @@ impl Node {
                 if self.is_leaf {
                     None
                 } else {
+                    if self.childrens[index].numbers_of_keys == MINIMUM_DEGREE - 1 {
+                        if self.childrens[index + 1].numbers_of_keys >= MINIMUM_DEGREE {
+                            // Move parent key down to self.children[index]
+                            let k1 = self.keys.remove(0);
+                            self.childrens[index].keys.push(k1);
+                            self.childrens[index].numbers_of_keys += 1;
+
+                            // Move siblings key up to parent
+                            let k2 = self.childrens[index + 1].keys.remove(0);
+                            self.keys.push(k2);
+                        } else {
+                            println!("------ OOPS NOT HANDLING THIS CASE YET -----");
+                        }
+                    }
+
                     self.childrens[index].remove(key)
                 }
             }
@@ -365,7 +378,8 @@ mod test {
         // assert_eq!(tree.get(&4), None);
 
         tree.print();
-        assert_eq!(tree.remove(&11), Some(11));
+        assert_eq!(tree.remove(&7), Some(7));
+        // assert_eq!(tree.remove(&11), Some(11));
         // assert_eq!(tree.remove(&16), Some(16));
 
         tree.print();
