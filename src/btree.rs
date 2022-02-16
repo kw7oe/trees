@@ -124,7 +124,10 @@ impl Node {
     }
 
     pub fn remove(&mut self, key: &u32) -> Option<u32> {
-        println!("Removing {key} from {:?}...", self.keys);
+        println!(
+            "Removing {key} from {:?} (is_leaf: {})...",
+            self.keys, self.is_leaf
+        );
         match self.keys.binary_search(key) {
             Ok(index) => {
                 if self.is_leaf {
@@ -233,22 +236,60 @@ impl Node {
                 if self.is_leaf {
                     None
                 } else {
-                    if self.childrens[index].numbers_of_keys == MINIMUM_DEGREE - 1 {
-                        if self.childrens[index + 1].numbers_of_keys >= MINIMUM_DEGREE {
+                    if index <= self.childrens.len() - 1
+                        && self.childrens[index].numbers_of_keys == MINIMUM_DEGREE - 1
+                    {
+                        let siblings = if index == self.childrens.len() - 1 {
+                            self.childrens[index - 1].as_mut()
+                        } else {
+                            self.childrens[index + 1].as_mut()
+                        };
+
+                        if siblings.numbers_of_keys >= MINIMUM_DEGREE {
+                            println!("Stealing from siblings...");
                             // Move parent key down to self.children[index]
+                            // Move siblings key up to parent
                             let k1 = self.keys.remove(0);
+
+                            // we can't move this below self.childnres[index]
+                            // because borrow checker will complain of mutable
+                            let k2 = siblings.keys.remove(0);
+
                             self.childrens[index].keys.push(k1);
                             self.childrens[index].numbers_of_keys += 1;
-
-                            // Move siblings key up to parent
-                            let k2 = self.childrens[index + 1].keys.remove(0);
                             self.keys.push(k2);
+                            self.childrens[index].remove(key)
                         } else {
-                            println!("------ OOPS NOT HANDLING THIS CASE YET -----");
-                        }
-                    }
+                            let k1 = self.keys.remove(0);
+                            self.numbers_of_keys -= 1;
 
-                    self.childrens[index].remove(key)
+                            let left = self.childrens.remove(0);
+                            let mut right = self.childrens.remove(0);
+
+                            println!("case3b ----");
+                            println!("Merging {:?}, {k1}, {:?}...", left.keys, right.keys);
+
+                            let mut new_keys = left.keys;
+                            new_keys.push(k1);
+                            new_keys.append(&mut right.keys);
+
+                            let mut left_chidrens = left.childrens;
+                            let mut right_childrens = right.childrens;
+                            left_chidrens.append(&mut right_childrens);
+
+                            let node = Node {
+                                numbers_of_keys: left.numbers_of_keys + right.numbers_of_keys + 1,
+                                is_leaf: left.is_leaf,
+                                keys: new_keys,
+                                childrens: left_chidrens,
+                            };
+
+                            self.childrens.push(Box::new(node));
+                            self.childrens[0].remove(key)
+                        }
+                    } else {
+                        self.childrens[index].remove(key)
+                    }
                 }
             }
         }
@@ -358,11 +399,11 @@ mod test {
         tree.insert(24);
         tree.insert(25);
         tree.insert(30);
-        tree.insert(31);
-        tree.insert(32);
-        tree.insert(33);
-        tree.insert(34);
-        tree.insert(35);
+        // tree.insert(31);
+        // tree.insert(32);
+        // tree.insert(33);
+        // tree.insert(34);
+        // tree.insert(35);
 
         assert_eq!(tree.get(&2), Some(&2));
         assert_eq!(tree.get(&7), Some(&7));
@@ -378,9 +419,11 @@ mod test {
         // assert_eq!(tree.get(&4), None);
 
         tree.print();
-        assert_eq!(tree.remove(&7), Some(7));
-        // assert_eq!(tree.remove(&11), Some(11));
-        // assert_eq!(tree.remove(&16), Some(16));
+        // assert_eq!(tree.remove(&7), Some(7));
+        assert_eq!(tree.remove(&18), Some(18));
+        // assert_eq!(tree.remove(&9), Some(9));
+        tree.print();
+        assert_eq!(tree.remove(&16), Some(16));
 
         tree.print();
     }
