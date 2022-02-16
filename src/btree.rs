@@ -201,8 +201,15 @@ impl Node {
 
                         // Get left and right child
 
-                        let left = self.childrens.remove(0);
-                        let mut right = self.childrens.remove(0);
+                        // if key = 18
+                        //     16 | 18 | 20
+                        //    /   /    \   \
+                        //   14  17    19  21
+                        //
+                        // left = 17
+                        // right = 19
+                        let left = self.childrens.remove(index);
+                        let mut right = self.childrens.remove(index);
 
                         println!("Merging {:?}, {key}, {:?}...", left.keys, right.keys);
 
@@ -246,7 +253,6 @@ impl Node {
                         };
 
                         if siblings.numbers_of_keys >= MINIMUM_DEGREE {
-                            println!("Stealing from siblings...");
                             // Move parent key down to self.children[index]
                             // Move siblings key up to parent
                             let k1 = self.keys.remove(0);
@@ -254,6 +260,8 @@ impl Node {
                             // we can't move this below self.childnres[index]
                             // because borrow checker will complain of mutable
                             let k2 = siblings.keys.remove(0);
+
+                            println!("Stealing {k2} from siblings and moving {k1} down...");
 
                             self.childrens[index].keys.push(k1);
                             self.childrens[index].numbers_of_keys += 1;
@@ -399,11 +407,6 @@ mod test {
         tree.insert(24);
         tree.insert(25);
         tree.insert(30);
-        // tree.insert(31);
-        // tree.insert(32);
-        // tree.insert(33);
-        // tree.insert(34);
-        // tree.insert(35);
 
         assert_eq!(tree.get(&2), Some(&2));
         assert_eq!(tree.get(&7), Some(&7));
@@ -418,18 +421,86 @@ mod test {
         assert_eq!(tree.get(&5), Some(&5));
         // assert_eq!(tree.get(&4), None);
 
-        tree.print();
         // assert_eq!(tree.remove(&7), Some(7));
         assert_eq!(tree.remove(&18), Some(18));
         // assert_eq!(tree.remove(&9), Some(9));
-        tree.print();
         assert_eq!(tree.remove(&16), Some(16));
+    }
 
+    #[test]
+    fn case_3a() {
+        let mut tree = BTree::new();
+        tree.insert(2);
+        tree.insert(7);
+        tree.insert(8);
+        tree.insert(9);
+        tree.insert(4);
+        tree.insert(6);
+        tree.insert(1);
+        tree.insert(5);
+        tree.insert(3);
+        tree.insert(10);
+        tree.insert(11);
+        tree.insert(14);
+        tree.insert(16);
+        tree.insert(17);
+        tree.insert(18);
+        tree.insert(19);
+        tree.insert(20);
+        tree.insert(21);
+        tree.insert(22);
+        tree.insert(23);
+        tree.insert(24);
+        tree.insert(25);
+        tree.insert(30);
+        tree.insert(31);
+        tree.insert(32);
+        tree.insert(33);
+        tree.insert(34);
+        tree.insert(35);
+
+        assert_eq!(tree.remove(&7), Some(7));
         tree.print();
     }
 
     #[test]
-    fn delete_key_on_root_node_with_internal_nodes() {
+    fn case_3b() {
+        let mut tree = BTree::new();
+        tree.insert(2);
+        tree.insert(7);
+        tree.insert(8);
+        tree.insert(9);
+        tree.insert(4);
+        tree.insert(6);
+        tree.insert(1);
+        tree.insert(5);
+        tree.insert(3);
+        tree.insert(10);
+        tree.insert(11);
+        tree.insert(14);
+        tree.insert(16);
+        tree.insert(17);
+        tree.insert(18);
+        tree.insert(19);
+        tree.insert(20);
+        tree.insert(21);
+        tree.insert(22);
+        tree.insert(23);
+        tree.insert(24);
+        tree.insert(25);
+        tree.insert(30);
+        tree.insert(31);
+        tree.insert(32);
+        tree.insert(33);
+        tree.insert(34);
+        tree.insert(35);
+
+        assert_eq!(tree.remove(&18), Some(18));
+        tree.print();
+    }
+
+    #[test]
+    fn delete_key_on_root_node_with_internal_nodes_case_a() {
         let mut tree = BTree::new();
         tree.insert(2);
         tree.insert(7);
@@ -445,6 +516,29 @@ mod test {
         tree.insert(14);
 
         assert_eq!(tree.remove(&7), Some(7));
+    }
+
+    #[test]
+    fn delete_key_on_root_node_with_internal_nodes_case_b() {
+        let mut tree = BTree::new();
+        tree.insert(2);
+        tree.insert(7);
+        tree.insert(8);
+        tree.insert(9);
+        tree.insert(4);
+        tree.insert(6);
+        tree.insert(1);
+        tree.insert(5);
+        tree.insert(3);
+        tree.insert(10);
+        tree.insert(11);
+        tree.insert(14);
+        tree.insert(16);
+        tree.insert(17);
+
+        tree.print();
+        assert_eq!(tree.remove(&7), Some(7));
+        tree.print();
     }
 
     #[test]
