@@ -271,10 +271,12 @@ impl Node {
                         if siblings.numbers_of_keys >= MINIMUM_DEGREE {
                             // Move parent key down to self.children[index]
                             // Move siblings key up to parent
-                            let k1 = self.keys.remove(0);
+                            // TODO: Update comment
+                            let k1 = self.keys.pop().unwrap();
 
                             // we can't move this below self.childnres[index]
                             // because borrow checker will complain of mutable
+                            // TODO: Update comment
                             let k2 = siblings.keys.remove(0);
 
                             println!("Stealing {k2} from siblings and moving {k1} down...");
@@ -419,8 +421,9 @@ mod test {
         assert_eq!(tree.remove(&18), Some(18));
         tree.print();
         // assert_eq!(tree.remove(&9), Some(9));
-        // assert_eq!(tree.remove(&16), Some(16));
-        //
+        assert_eq!(tree.remove(&16), Some(16));
+
+        tree.print();
     }
 
     #[test]
