@@ -123,6 +123,58 @@ impl Node {
         }
     }
 
+    // Merge both child
+    //     4  |  7
+    //    /   |   \
+    //   1    6  8|9
+    //
+    // Delete 4:
+    //
+    //         7
+    //     /      \
+    //   1|4|6    8|9
+    //
+    //        7
+    //      /   \
+    //    1|6   8|9
+
+    // Get left and right child
+
+    // if key = 18
+    //     16 | 18 | 20
+    //    /   /    \   \
+    //   14  17    19  21
+    //
+    // left = 17
+    // right = 19
+    pub fn merge_childs(&mut self, index: usize) {
+        let key = self.keys.remove(index);
+        self.numbers_of_keys -= 1;
+
+        let left = self.childrens.remove(index);
+        let mut right = self.childrens.remove(index);
+
+        println!("Merging {:?}, {key}, {:?}...", left.keys, right.keys);
+
+        // Merge the keys
+        let mut new_keys = left.keys;
+        new_keys.push(key);
+        new_keys.append(&mut right.keys);
+
+        let mut left_chidrens = left.childrens;
+        let mut right_childrens = right.childrens;
+        left_chidrens.append(&mut right_childrens);
+
+        let node = Node {
+            numbers_of_keys: left.numbers_of_keys + right.numbers_of_keys + 1,
+            is_leaf: left.is_leaf,
+            keys: new_keys,
+            childrens: left_chidrens,
+        };
+
+        self.childrens.insert(index, Box::new(node));
+    }
+
     pub fn remove(&mut self, key: &u32) -> Option<u32> {
         println!(
             "Removing {key} from {:?} (is_leaf: {})...",
@@ -184,56 +236,7 @@ impl Node {
 
                         Some(key)
                     } else {
-                        // Merge both child
-                        //     4  |  7
-                        //    /   |   \
-                        //   1    6  8|9
-                        //
-                        // Delete 4:
-                        //
-                        //         7
-                        //     /      \
-                        //   1|4|6    8|9
-                        //
-                        //        7
-                        //      /   \
-                        //    1|6   8|9
-
-                        // Get left and right child
-
-                        // if key = 18
-                        //     16 | 18 | 20
-                        //    /   /    \   \
-                        //   14  17    19  21
-                        //
-                        // left = 17
-                        // right = 19
-                        let left = self.childrens.remove(index);
-                        let mut right = self.childrens.remove(index);
-
-                        println!("Merging {:?}, {key}, {:?}...", left.keys, right.keys);
-
-                        // Merge the keys
-                        let mut new_keys = left.keys;
-                        new_keys.push(*key);
-                        new_keys.append(&mut right.keys);
-
-                        let mut left_chidrens = left.childrens;
-                        let mut right_childrens = right.childrens;
-                        left_chidrens.append(&mut right_childrens);
-
-                        let node = Node {
-                            numbers_of_keys: left.numbers_of_keys + right.numbers_of_keys + 1,
-                            is_leaf: left.is_leaf,
-                            keys: new_keys,
-                            childrens: left_chidrens,
-                        };
-
-                        self.keys.remove(index);
-                        self.numbers_of_keys -= 1;
-
-                        self.childrens.insert(index, Box::new(node));
-
+                        self.merge_childs(index);
                         // Recursively call remove
                         self.childrens[index].remove(key)
                     }
@@ -268,32 +271,9 @@ impl Node {
                             self.keys.push(k2);
                             self.childrens[index].remove(key)
                         } else {
-                            let k1 = self.keys.remove(0);
-                            self.numbers_of_keys -= 1;
-
-                            let left = self.childrens.remove(0);
-                            let mut right = self.childrens.remove(0);
-
-                            println!("case3b ----");
-                            println!("Merging {:?}, {k1}, {:?}...", left.keys, right.keys);
-
-                            let mut new_keys = left.keys;
-                            new_keys.push(k1);
-                            new_keys.append(&mut right.keys);
-
-                            let mut left_chidrens = left.childrens;
-                            let mut right_childrens = right.childrens;
-                            left_chidrens.append(&mut right_childrens);
-
-                            let node = Node {
-                                numbers_of_keys: left.numbers_of_keys + right.numbers_of_keys + 1,
-                                is_leaf: left.is_leaf,
-                                keys: new_keys,
-                                childrens: left_chidrens,
-                            };
-
-                            self.childrens.push(Box::new(node));
-                            self.childrens[0].remove(key)
+                            self.merge_childs(0);
+                            // self.childrens.push(Box::new(node));
+                            self.childrens[index].remove(key)
                         }
                     } else {
                         self.childrens[index].remove(key)
@@ -421,10 +401,13 @@ mod test {
         assert_eq!(tree.get(&5), Some(&5));
         // assert_eq!(tree.get(&4), None);
 
+        tree.print();
         // assert_eq!(tree.remove(&7), Some(7));
         assert_eq!(tree.remove(&18), Some(18));
+        tree.print();
         // assert_eq!(tree.remove(&9), Some(9));
-        assert_eq!(tree.remove(&16), Some(16));
+        // assert_eq!(tree.remove(&16), Some(16));
+        //
     }
 
     #[test]
