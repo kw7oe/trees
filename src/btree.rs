@@ -224,9 +224,22 @@ impl Node {
                         //    /   |   \
                         //   1    6  8|9
                         let mut most_right = &mut self.childrens[index + 1];
+                        if !most_right.is_leaf
+                            && most_right.childrens[0].numbers_of_keys < MINIMUM_DEGREE
+                            && most_right.childrens[1].numbers_of_keys < MINIMUM_DEGREE
+                        {
+                            most_right.merge_childs(0);
+                        }
 
                         while let Some(node) = most_right.childrens.first_mut() {
                             most_right = node;
+                            println!("most_right: {:?}", most_right);
+                            if !most_right.is_leaf
+                                && most_right.childrens[0].numbers_of_keys < MINIMUM_DEGREE
+                                && most_right.childrens[1].numbers_of_keys < MINIMUM_DEGREE
+                            {
+                                most_right.merge_childs(0);
+                            }
                         }
 
                         let k1 = most_right.keys.remove(0);
@@ -273,7 +286,7 @@ impl Node {
                         } else {
                             self.merge_childs(0);
                             // self.childrens.push(Box::new(node));
-                            self.childrens[index].remove(key)
+                            self.childrens[0].remove(key)
                         }
                     } else {
                         self.childrens[index].remove(key)
@@ -578,8 +591,10 @@ mod test {
         tree.insert(1);
         tree.insert(5);
 
+        tree.print();
         assert_eq!(tree.remove(&2), Some(2));
 
+        tree.print();
         // Actual case b
         assert_eq!(tree.remove(&4), Some(4));
     }
