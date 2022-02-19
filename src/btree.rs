@@ -437,7 +437,30 @@ mod test {
         assert_eq!(tree.get(&12), None);
         assert_eq!(tree.get(&5), Some(&5));
 
+        tree.remove(&7);
+        tree.remove(&16);
+        tree.remove(&1);
+        tree.remove(&18);
         tree.print();
+
+        // To Fix: remove 7, 16, 1, 18, 24, 23
+        // tree.remove(&24);
+        // tree.print();
+        // tree.remove(&23);
+        // tree.print();
+
+        // To Fix: remove 7, 16, 1, 18, 6, 19
+        // tree.remove(&6);
+        // tree.remove(&19);
+        // tree.print();
+
+        // To Fix: remove 7, 16, 1, 18, 14
+        // tree.remove(&14);
+        // tree.print();
+
+        // To Fix: remove 7, 16, 1, 18, 21
+        // tree.remove(&21);
+        // tree.print();
     }
 
     #[test]
