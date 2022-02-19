@@ -192,33 +192,19 @@ impl Node {
 
             // Recursively find the biggest left children to be swap:
             let mut most_left = &mut self.childrens[index];
-            if !most_left.is_leaf
-                && (most_left.childrens[most_left.childrens.len() - 1].numbers_of_keys
-                    < MINIMUM_DEGREE
-                    || most_left.childrens[most_left.childrens.len() - 2].numbers_of_keys
-                        < MINIMUM_DEGREE)
-            {
-                most_left.merge_childs(most_left.childrens.len() - 2);
-            }
 
             while let Some(node) = most_left.childrens.last_mut() {
                 most_left = node;
-                println!("most_left: {:?}", most_left);
-                if !most_left.is_leaf
-                    && (most_left.childrens[most_left.childrens.len() - 1].numbers_of_keys
-                        < MINIMUM_DEGREE
-                        || most_left.childrens[most_left.childrens.len() - 2].numbers_of_keys
-                            < MINIMUM_DEGREE)
-                {
-                    most_left.merge_childs(most_left.childrens.len() - 2);
-                }
             }
 
-            let k1 = most_left.keys.pop().unwrap();
-            most_left.numbers_of_keys -= 1;
+            let k1 = most_left.keys[most_left.keys.len() - 1];
+
+            // Swap k1 with key:
             let key = self.keys.remove(index);
             self.keys.insert(index, k1);
-
+            println!("Replace {key} with {k1}: {:?}", self.keys);
+            println!("Removing {k1} from {:?}...", self.childrens[index]);
+            self.childrens[index].remove(&k1);
             Some(key)
         } else if self.childrens[index + 1].numbers_of_keys >= MINIMUM_DEGREE {
             println!("Swap with right child...");
@@ -263,11 +249,51 @@ impl Node {
         }
     }
 
+    pub fn fill(&mut self, index: usize) {
+        let is_prev = index == (self.childrens.len() - 1);
+
+        // TODO: Fix this
+        // Currently, we only look at the prev sibling if we are the last
+        // child.
+        //
+        // This is not entirely correct because the actual implementation
+        // is to look at both immediate siblings to see if they have t
+        // keys. So there will be a case where the fill doesn't happen at all.
+        let siblings = if index == self.childrens.len() - 1 {
+            self.childrens[index - 1].as_mut()
+        } else {
+            self.childrens[index + 1].as_mut()
+        };
+
+        if siblings.numbers_of_keys >= MINIMUM_DEGREE {
+            // Move parent key down to self.children[index]
+            // Move siblings key up to parent
+            // TODO: Update comment
+            let k1 = self.keys.pop().unwrap();
+
+            if is_prev {
+                let k2 = siblings.keys.pop().unwrap();
+                println!("Stealing {k2} last value from prev siblings and moving {k1} below as first value...");
+                self.childrens[index].keys.insert(0, k1);
+                self.childrens[index].numbers_of_keys += 1;
+                self.keys.push(k2);
+            } else {
+                let k2 = siblings.keys.remove(0);
+                println!("Stealing {k2}, first value from next siblings and insert {k1} below as last value...");
+                self.childrens[index].keys.push(k1);
+                self.childrens[index].numbers_of_keys += 1;
+                self.keys.push(k2);
+            }
+        } else {
+            if index == self.childrens.len() - 1 {
+                self.merge_childs(index - 1);
+            } else {
+                self.merge_childs(index);
+            }
+        }
+    }
+
     pub fn remove(&mut self, key: &u32) -> Option<u32> {
-        println!(
-            "Removing {key} from {:?} (is_leaf: {})...",
-            self.keys, self.is_leaf
-        );
         match self.keys.binary_search(key) {
             Ok(index) => {
                 if self.is_leaf {
@@ -282,39 +308,14 @@ impl Node {
                 if self.is_leaf {
                     None
                 } else {
-                    if index <= self.childrens.len() - 1
-                        && self.childrens[index].numbers_of_keys == MINIMUM_DEGREE - 1
-                    {
-                        let siblings = if index == self.childrens.len() - 1 {
-                            self.childrens[index - 1].as_mut()
-                        } else {
-                            self.childrens[index + 1].as_mut()
-                        };
+                    if self.childrens[index].numbers_of_keys == MINIMUM_DEGREE - 1 {
+                        self.fill(index);
+                    }
 
-                        if siblings.numbers_of_keys >= MINIMUM_DEGREE {
-                            // Move parent key down to self.children[index]
-                            // Move siblings key up to parent
-                            // TODO: Update comment
-                            let k1 = self.keys.pop().unwrap();
-
-                            // we can't move this below self.childnres[index]
-                            // because borrow checker will complain of mutable
-                            // TODO: Update comment
-                            let k2 = siblings.keys.remove(0);
-
-                            println!("Stealing {k2} from siblings and moving {k1} down...");
-
-                            self.childrens[index].keys.push(k1);
-                            self.childrens[index].numbers_of_keys += 1;
-                            self.keys.push(k2);
-                            self.childrens[index].remove(key)
-                        } else {
-                            self.merge_childs(0);
-                            // self.childrens.push(Box::new(node));
-                            self.childrens[0].remove(key)
-                        }
-                    } else {
+                    if index < self.childrens.len() {
                         self.childrens[index].remove(key)
+                    } else {
+                        self.childrens[index - 1].remove(key)
                     }
                 }
             }
@@ -466,9 +467,7 @@ mod test {
         tree.insert(28);
         tree.insert(29);
 
-        tree.print();
         assert_eq!(tree.remove(&16), Some(16));
-        tree.print();
     }
 
     #[test]
@@ -537,7 +536,6 @@ mod test {
         tree.insert(35);
 
         assert_eq!(tree.remove(&7), Some(7));
-        tree.print();
     }
 
     #[test]
@@ -573,7 +571,6 @@ mod test {
         tree.insert(35);
 
         assert_eq!(tree.remove(&18), Some(18));
-        tree.print();
     }
 
     #[test]
@@ -613,9 +610,7 @@ mod test {
         tree.insert(16);
         tree.insert(17);
 
-        tree.print();
         assert_eq!(tree.remove(&7), Some(7));
-        tree.print();
     }
 
     #[test]
@@ -672,10 +667,8 @@ mod test {
         tree.insert(1);
         tree.insert(5);
 
-        tree.print();
         assert_eq!(tree.remove(&2), Some(2));
 
-        tree.print();
         // Actual case b
         assert_eq!(tree.remove(&4), Some(4));
     }
