@@ -201,9 +201,29 @@ impl Node {
 
                         // Recursively find the biggest left children to be swap:
                         let mut most_left = &mut self.childrens[index];
+                        if !most_left.is_leaf
+                            && (most_left.childrens[most_left.childrens.len() - 1].numbers_of_keys
+                                < MINIMUM_DEGREE
+                                || most_left.childrens[most_left.childrens.len() - 2]
+                                    .numbers_of_keys
+                                    < MINIMUM_DEGREE)
+                        {
+                            most_left.merge_childs(most_left.childrens.len() - 2);
+                        }
 
                         while let Some(node) = most_left.childrens.last_mut() {
                             most_left = node;
+                            println!("most_left: {:?}", most_left);
+                            if !most_left.is_leaf
+                                && (most_left.childrens[most_left.childrens.len() - 1]
+                                    .numbers_of_keys
+                                    < MINIMUM_DEGREE
+                                    || most_left.childrens[most_left.childrens.len() - 2]
+                                        .numbers_of_keys
+                                        < MINIMUM_DEGREE)
+                            {
+                                most_left.merge_childs(most_left.childrens.len() - 2);
+                            }
                         }
 
                         let k1 = most_left.keys.pop().unwrap();
@@ -411,19 +431,74 @@ mod test {
         assert_eq!(tree.get(&10), Some(&10));
         assert_eq!(tree.get(&4), Some(&4));
         assert_eq!(tree.get(&12), None);
-
-        // assert_eq!(tree.remove(&4), Some(4));
         assert_eq!(tree.get(&5), Some(&5));
-        // assert_eq!(tree.get(&4), None);
 
         tree.print();
-        // assert_eq!(tree.remove(&7), Some(7));
-        assert_eq!(tree.remove(&18), Some(18));
+    }
+
+    #[test]
+    fn merge_child_before_swapping_left_child_bigget_value() {
+        let mut tree = BTree::new();
+        tree.insert(10);
+        tree.insert(11);
+        tree.insert(14);
+        tree.insert(16);
+        tree.insert(17);
+        tree.insert(18);
+        tree.insert(19);
+        tree.insert(20);
+        tree.insert(21);
+        tree.insert(22);
+        tree.insert(23);
+        tree.insert(24);
+        tree.insert(25);
+        tree.insert(30);
+        tree.insert(1);
+        tree.insert(2);
+        tree.insert(15);
+        tree.insert(13);
+        tree.insert(12);
+        tree.insert(26);
+        tree.insert(27);
+        tree.insert(28);
+        tree.insert(29);
+
         tree.print();
-        // assert_eq!(tree.remove(&9), Some(9));
         assert_eq!(tree.remove(&16), Some(16));
-
         tree.print();
+    }
+
+    #[test]
+    fn merge_child_before_swapping_right_child_smallest_value() {
+        let mut tree = BTree::new();
+        tree.insert(2);
+        tree.insert(7);
+        tree.insert(8);
+        tree.insert(9);
+        tree.insert(4);
+        tree.insert(6);
+        tree.insert(1);
+        tree.insert(5);
+        tree.insert(3);
+        tree.insert(10);
+        tree.insert(11);
+        tree.insert(14);
+        tree.insert(16);
+        tree.insert(17);
+        tree.insert(18);
+        tree.insert(19);
+        tree.insert(20);
+        tree.insert(21);
+        tree.insert(22);
+        tree.insert(23);
+        tree.insert(24);
+        tree.insert(25);
+        tree.insert(30);
+
+        assert_eq!(tree.remove(&18), Some(18));
+
+        // Steal from right, merge, and remove
+        assert_eq!(tree.remove(&16), Some(16));
     }
 
     #[test]
