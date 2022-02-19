@@ -175,6 +175,94 @@ impl Node {
         self.childrens.insert(index, Box::new(node));
     }
 
+    pub fn remove_from_internals(&mut self, index: usize) -> Option<u32> {
+        let key = self.keys[index];
+
+        if self.childrens[index].numbers_of_keys >= MINIMUM_DEGREE {
+            println!("Swap with left child...");
+            //     4  |  7
+            //    /   |   \
+            //   1|2  6  8|9
+            //
+            // Delete 4:
+            //
+            //     2  |  7
+            //    /   |   \
+            //   1    6   8|9
+
+            // Recursively find the biggest left children to be swap:
+            let mut most_left = &mut self.childrens[index];
+            if !most_left.is_leaf
+                && (most_left.childrens[most_left.childrens.len() - 1].numbers_of_keys
+                    < MINIMUM_DEGREE
+                    || most_left.childrens[most_left.childrens.len() - 2].numbers_of_keys
+                        < MINIMUM_DEGREE)
+            {
+                most_left.merge_childs(most_left.childrens.len() - 2);
+            }
+
+            while let Some(node) = most_left.childrens.last_mut() {
+                most_left = node;
+                println!("most_left: {:?}", most_left);
+                if !most_left.is_leaf
+                    && (most_left.childrens[most_left.childrens.len() - 1].numbers_of_keys
+                        < MINIMUM_DEGREE
+                        || most_left.childrens[most_left.childrens.len() - 2].numbers_of_keys
+                            < MINIMUM_DEGREE)
+                {
+                    most_left.merge_childs(most_left.childrens.len() - 2);
+                }
+            }
+
+            let k1 = most_left.keys.pop().unwrap();
+            most_left.numbers_of_keys -= 1;
+            let key = self.keys.remove(index);
+            self.keys.insert(index, k1);
+
+            Some(key)
+        } else if self.childrens[index + 1].numbers_of_keys >= MINIMUM_DEGREE {
+            println!("Swap with right child...");
+            //     4  |  7
+            //    /   |   \
+            //   1   5|6  8|9
+            //
+            // Delete 4:
+            //
+            //     5  |  7
+            //    /   |   \
+            //   1    6  8|9
+            let mut most_right = &mut self.childrens[index + 1];
+            if !most_right.is_leaf
+                && most_right.childrens[0].numbers_of_keys < MINIMUM_DEGREE
+                && most_right.childrens[1].numbers_of_keys < MINIMUM_DEGREE
+            {
+                most_right.merge_childs(0);
+            }
+
+            while let Some(node) = most_right.childrens.first_mut() {
+                most_right = node;
+                println!("most_right: {:?}", most_right);
+                if !most_right.is_leaf
+                    && most_right.childrens[0].numbers_of_keys < MINIMUM_DEGREE
+                    && most_right.childrens[1].numbers_of_keys < MINIMUM_DEGREE
+                {
+                    most_right.merge_childs(0);
+                }
+            }
+
+            let k1 = most_right.keys.remove(0);
+            most_right.numbers_of_keys -= 1;
+            let key = self.keys.remove(index);
+            self.keys.insert(index, k1);
+
+            Some(key)
+        } else {
+            self.merge_childs(index);
+            // Recursively call remove
+            self.childrens[index].remove(&key)
+        }
+    }
+
     pub fn remove(&mut self, key: &u32) -> Option<u32> {
         println!(
             "Removing {key} from {:?} (is_leaf: {})...",
@@ -187,92 +275,7 @@ impl Node {
                     self.numbers_of_keys -= 1;
                     Some(key)
                 } else {
-                    if self.childrens[index].numbers_of_keys >= MINIMUM_DEGREE {
-                        println!("Swap with left child...");
-                        //     4  |  7
-                        //    /   |   \
-                        //   1|2  6  8|9
-                        //
-                        // Delete 4:
-                        //
-                        //     2  |  7
-                        //    /   |   \
-                        //   1    6   8|9
-
-                        // Recursively find the biggest left children to be swap:
-                        let mut most_left = &mut self.childrens[index];
-                        if !most_left.is_leaf
-                            && (most_left.childrens[most_left.childrens.len() - 1].numbers_of_keys
-                                < MINIMUM_DEGREE
-                                || most_left.childrens[most_left.childrens.len() - 2]
-                                    .numbers_of_keys
-                                    < MINIMUM_DEGREE)
-                        {
-                            most_left.merge_childs(most_left.childrens.len() - 2);
-                        }
-
-                        while let Some(node) = most_left.childrens.last_mut() {
-                            most_left = node;
-                            println!("most_left: {:?}", most_left);
-                            if !most_left.is_leaf
-                                && (most_left.childrens[most_left.childrens.len() - 1]
-                                    .numbers_of_keys
-                                    < MINIMUM_DEGREE
-                                    || most_left.childrens[most_left.childrens.len() - 2]
-                                        .numbers_of_keys
-                                        < MINIMUM_DEGREE)
-                            {
-                                most_left.merge_childs(most_left.childrens.len() - 2);
-                            }
-                        }
-
-                        let k1 = most_left.keys.pop().unwrap();
-                        most_left.numbers_of_keys -= 1;
-                        let key = self.keys.remove(index);
-                        self.keys.insert(index, k1);
-
-                        Some(key)
-                    } else if self.childrens[index + 1].numbers_of_keys >= MINIMUM_DEGREE {
-                        println!("Swap with right child...");
-                        //     4  |  7
-                        //    /   |   \
-                        //   1   5|6  8|9
-                        //
-                        // Delete 4:
-                        //
-                        //     5  |  7
-                        //    /   |   \
-                        //   1    6  8|9
-                        let mut most_right = &mut self.childrens[index + 1];
-                        if !most_right.is_leaf
-                            && most_right.childrens[0].numbers_of_keys < MINIMUM_DEGREE
-                            && most_right.childrens[1].numbers_of_keys < MINIMUM_DEGREE
-                        {
-                            most_right.merge_childs(0);
-                        }
-
-                        while let Some(node) = most_right.childrens.first_mut() {
-                            most_right = node;
-                            println!("most_right: {:?}", most_right);
-                            if !most_right.is_leaf
-                                && most_right.childrens[0].numbers_of_keys < MINIMUM_DEGREE
-                                && most_right.childrens[1].numbers_of_keys < MINIMUM_DEGREE
-                            {
-                                most_right.merge_childs(0);
-                            }
-                        }
-
-                        let k1 = most_right.keys.remove(0);
-                        most_right.numbers_of_keys -= 1;
-                        let key = self.keys.remove(index);
-                        self.keys.insert(index, k1);
-
-                        Some(key)
-                    } else {
-                        self.merge_childs(index);
-                        // Recursively call remove
-                        self.childrens[index].remove(key)
-                    }
+                    self.remove_from_internals(index)
                 }
             }
             Err(index) => {
