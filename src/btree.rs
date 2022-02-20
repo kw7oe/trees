@@ -172,10 +172,10 @@ impl Node {
         };
 
         self.childrens.insert(index, Box::new(node));
-        println!("Leftover: {:?}", self.keys);
     }
 
     pub fn remove_from_internals(&mut self, index: usize) -> Option<u32> {
+        println!("my childrens: {:?}", self.childrens);
         let key = self.keys[index];
 
         if self.childrens[index].numbers_of_keys >= MINIMUM_DEGREE {
@@ -275,20 +275,26 @@ impl Node {
 
             if is_prev {
                 let k2 = siblings.keys.pop().unwrap();
+                let child = siblings.childrens.pop().unwrap();
                 siblings.numbers_of_keys -= 1;
 
                 println!("Stealing {k2} last value from prev siblings and moving {k1} below as first value...");
                 self.childrens[index].keys.insert(0, k1);
                 self.childrens[index].numbers_of_keys += 1;
                 self.keys.push(k2);
+
+                self.childrens[index].childrens.insert(0, child);
             } else {
                 let k2 = siblings.keys.remove(0);
+                let child = siblings.childrens.remove(0);
                 siblings.numbers_of_keys -= 1;
 
                 println!("Stealing {k2}, first value from next siblings and insert {k1} below as last value...");
                 self.childrens[index].keys.push(k1);
                 self.childrens[index].numbers_of_keys += 1;
                 self.keys.push(k2);
+
+                self.childrens[index].childrens.push(child);
             }
         } else {
             if index == self.childrens.len() - 1 {
@@ -398,6 +404,7 @@ impl BTree {
 
             while let Some(node) = queue.pop_back() {
                 print!(" {:?} ", node.keys);
+                // print!(" {:?} \n", node.childrens);
                 visited_child += 1;
 
                 for c in &node.childrens {
@@ -458,29 +465,29 @@ mod test {
         assert_eq!(tree.get(&5), Some(&5));
 
         tree.remove(&7);
+        // Previously, childrens linkage broke here.
         tree.remove(&16);
         tree.remove(&1);
         tree.remove(&18);
-        tree.print();
 
-        // To Fix: remove 7, 16, 1, 18, 24, 23
-        tree.remove(&24);
-        tree.print();
+        // Fixed!
+        // tree.remove(&24);
+        // tree.print();
         // tree.remove(&23);
         // tree.print();
 
-        // To Fix: remove 7, 16, 1, 18, 6, 19
+        // Fixed!
         // tree.remove(&6);
         // tree.remove(&19);
         // tree.print();
 
-        // To Fix: remove 7, 16, 1, 18, 14
+        // Fixed!
         // tree.remove(&14);
         // tree.print();
 
-        // To Fix: remove 7, 16, 1, 18, 21
-        // tree.remove(&21);
-        // tree.print();
+        // Fixed!
+        tree.remove(&21);
+        tree.print();
     }
 
     #[test]
