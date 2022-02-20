@@ -175,7 +175,6 @@ impl Node {
     }
 
     pub fn remove_from_internals(&mut self, index: usize) -> Option<u32> {
-        println!("my childrens: {:?}", self.childrens);
         let key = self.keys[index];
 
         if self.childrens[index].numbers_of_keys >= MINIMUM_DEGREE {
@@ -275,26 +274,28 @@ impl Node {
 
             if is_prev {
                 let k2 = siblings.keys.pop().unwrap();
-                let child = siblings.childrens.pop().unwrap();
                 siblings.numbers_of_keys -= 1;
+                if !siblings.is_leaf {
+                    let child = siblings.childrens.pop().unwrap();
+                    self.childrens[index].childrens.insert(0, child);
+                }
 
                 println!("Stealing {k2} last value from prev siblings and moving {k1} below as first value...");
                 self.childrens[index].keys.insert(0, k1);
                 self.childrens[index].numbers_of_keys += 1;
                 self.keys.push(k2);
-
-                self.childrens[index].childrens.insert(0, child);
             } else {
                 let k2 = siblings.keys.remove(0);
-                let child = siblings.childrens.remove(0);
                 siblings.numbers_of_keys -= 1;
+                if !siblings.is_leaf {
+                    let child = siblings.childrens.remove(0);
+                    self.childrens[index].childrens.push(child);
+                }
 
                 println!("Stealing {k2}, first value from next siblings and insert {k1} below as last value...");
                 self.childrens[index].keys.push(k1);
                 self.childrens[index].numbers_of_keys += 1;
                 self.keys.push(k2);
-
-                self.childrens[index].childrens.push(child);
             }
         } else {
             if index == self.childrens.len() - 1 {
@@ -404,7 +405,7 @@ impl BTree {
 
             while let Some(node) = queue.pop_back() {
                 print!(" {:?} ", node.keys);
-                // print!(" {:?} \n", node.childrens);
+                // println!("{:?}: {:?}", node.keys, node.childrens);
                 visited_child += 1;
 
                 for c in &node.childrens {
@@ -517,7 +518,9 @@ mod test {
         tree.insert(28);
         tree.insert(29);
 
+        tree.print();
         assert_eq!(tree.remove(&16), Some(16));
+        tree.print();
     }
 
     #[test]
