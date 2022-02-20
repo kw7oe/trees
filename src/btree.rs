@@ -219,28 +219,20 @@ impl Node {
             //    /   |   \
             //   1    6  8|9
             let mut most_right = &mut self.childrens[index + 1];
-            if !most_right.is_leaf
-                && most_right.childrens[0].numbers_of_keys < MINIMUM_DEGREE
-                && most_right.childrens[1].numbers_of_keys < MINIMUM_DEGREE
-            {
-                most_right.merge_childs(0);
-            }
 
             while let Some(node) = most_right.childrens.first_mut() {
                 most_right = node;
-                println!("most_right: {:?}", most_right);
-                if !most_right.is_leaf
-                    && most_right.childrens[0].numbers_of_keys < MINIMUM_DEGREE
-                    && most_right.childrens[1].numbers_of_keys < MINIMUM_DEGREE
-                {
-                    most_right.merge_childs(0);
-                }
             }
 
-            let k1 = most_right.keys.remove(0);
-            most_right.numbers_of_keys -= 1;
+            let k1 = most_right.keys[0];
+
+            // Swap k1 with key:
+            println!("Replace {key} with {k1}: {:?}", self.keys);
             let key = self.keys.remove(index);
             self.keys.insert(index, k1);
+
+            println!("Removing {k1} from {:?}...", self.childrens[index + 1]);
+            self.childrens[index + 1].remove(&k1);
 
             Some(key)
         } else {
@@ -550,10 +542,13 @@ mod test {
         tree.insert(25);
         tree.insert(30);
 
+        tree.print();
         assert_eq!(tree.remove(&18), Some(18));
+        tree.print();
 
         // Steal from right, merge, and remove
         assert_eq!(tree.remove(&16), Some(16));
+        tree.print();
     }
 
     #[test]
