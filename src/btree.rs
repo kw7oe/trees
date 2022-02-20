@@ -200,11 +200,13 @@ impl Node {
             let k1 = most_left.keys[most_left.keys.len() - 1];
 
             // Swap k1 with key:
-            let key = self.keys.remove(index);
-            self.numbers_of_keys -= 1;
             println!("Replace {key} with {k1}: {:?}", self.keys);
+            let key = self.keys.remove(index);
+            self.keys.insert(index, k1);
+
             println!("Removing {k1} from {:?}...", self.childrens[index]);
             self.childrens[index].remove(&k1);
+
             Some(key)
         } else if self.childrens[index + 1].numbers_of_keys >= MINIMUM_DEGREE {
             println!("Swap with right child...");
