@@ -4,7 +4,6 @@ pub struct BTree {
     root: Option<Box<Node>>,
 }
 
-#[derive(Debug)]
 struct Node {
     numbers_of_keys: usize,    // 2t ^ h - 1.
     keys: Vec<u32>,            // At least t - 1 keys, at most 2t - 1 keys
@@ -173,6 +172,7 @@ impl Node {
         };
 
         self.childrens.insert(index, Box::new(node));
+        println!("Leftover: {:?}", self.keys);
     }
 
     pub fn remove_from_internals(&mut self, index: usize) -> Option<u32> {
@@ -201,7 +201,7 @@ impl Node {
 
             // Swap k1 with key:
             let key = self.keys.remove(index);
-            self.keys.insert(index, k1);
+            self.numbers_of_keys -= 1;
             println!("Replace {key} with {k1}: {:?}", self.keys);
             println!("Removing {k1} from {:?}...", self.childrens[index]);
             self.childrens[index].remove(&k1);
@@ -273,12 +273,16 @@ impl Node {
 
             if is_prev {
                 let k2 = siblings.keys.pop().unwrap();
+                siblings.numbers_of_keys -= 1;
+
                 println!("Stealing {k2} last value from prev siblings and moving {k1} below as first value...");
                 self.childrens[index].keys.insert(0, k1);
                 self.childrens[index].numbers_of_keys += 1;
                 self.keys.push(k2);
             } else {
                 let k2 = siblings.keys.remove(0);
+                siblings.numbers_of_keys -= 1;
+
                 println!("Stealing {k2}, first value from next siblings and insert {k1} below as last value...");
                 self.childrens[index].keys.push(k1);
                 self.childrens[index].numbers_of_keys += 1;
@@ -294,6 +298,7 @@ impl Node {
     }
 
     pub fn remove(&mut self, key: &u32) -> Option<u32> {
+        println!("--- Remove {key} from {:?}", self.keys);
         match self.keys.binary_search(key) {
             Ok(index) => {
                 if self.is_leaf {
@@ -305,10 +310,13 @@ impl Node {
                 }
             }
             Err(index) => {
+                println!("Didn't found key in current node, child index: {index}...");
                 if self.is_leaf {
                     None
                 } else {
+                    println!("my children: {:?}", self.childrens);
                     if self.childrens[index].numbers_of_keys == MINIMUM_DEGREE - 1 {
+                        println!("Child has less than t keys, fill it up...");
                         self.fill(index);
                     }
 
@@ -320,6 +328,16 @@ impl Node {
                 }
             }
         }
+    }
+}
+
+impl std::fmt::Debug for Node {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Node {{ keys: {:?}, number_of_keys: {} }}",
+            self.keys, self.numbers_of_keys
+        )
     }
 }
 
@@ -444,8 +462,8 @@ mod test {
         tree.print();
 
         // To Fix: remove 7, 16, 1, 18, 24, 23
-        // tree.remove(&24);
-        // tree.print();
+        tree.remove(&24);
+        tree.print();
         // tree.remove(&23);
         // tree.print();
 
