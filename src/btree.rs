@@ -245,7 +245,7 @@ impl Node {
     pub fn fill(&mut self, index: usize) {
         let is_prev = index == (self.childrens.len() - 1);
 
-        // TODO: Fix this
+        // TODO: Add test case and fix this:
         // Currently, we only look at the prev sibling if we are the last
         // child.
         //
@@ -259,9 +259,11 @@ impl Node {
         };
 
         if siblings.numbers_of_keys >= MINIMUM_DEGREE {
-            // Move parent key down to self.children[index]
-            // Move siblings key up to parent
-            // TODO: Update comment
+            // Get the last key from our parent
+            //
+            // It doesn't matter as we will then decide
+            // to push to our children end or insert in front
+            // depending of whether is a left or right child.
             let k1 = self.keys.pop().unwrap();
 
             if is_prev {
@@ -324,6 +326,7 @@ impl Node {
                     if index < self.childrens.len() {
                         self.childrens[index].remove(key)
                     } else {
+                        // TODO: Add test case for this.
                         self.childrens[index - 1].remove(key)
                     }
                 }
