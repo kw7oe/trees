@@ -11,6 +11,8 @@ struct Node {
     is_leaf: bool,
 }
 
+const MAX_DEGREE: usize = 4;
+
 impl Node {
     pub fn new(is_leaf: bool) -> Self {
         Node {
@@ -35,10 +37,48 @@ impl Node {
         }
     }
 
+    pub fn insert_and_split(&mut self, key: u32) {
+        self.insert_non_full(key);
+
+        if self.is_leaf {
+            let mut left_node = Node::new(true);
+            let mut right_node = Node::new(true);
+
+            let breakpoint = (MAX_DEGREE + 1) / 2;
+
+            for _ in 0..breakpoint {
+                let value = self.values.remove(0);
+                self.keys.remove(0);
+                left_node.values.push(value);
+                left_node.keys.push(value);
+            }
+
+            right_node.values.push(self.values[0]);
+            right_node.keys.push(self.keys[0]);
+
+            for _ in 0..(breakpoint - 1) {
+                let value = self.values.remove(1);
+                self.keys.remove(1);
+                right_node.values.push(value);
+                right_node.keys.push(value);
+            }
+
+            self.childrens.push(Box::new(left_node));
+            self.childrens.push(Box::new(right_node));
+            self.is_leaf = false;
+        }
+    }
+
     pub fn search(&self, key: &u32) -> Option<&u32> {
         match self.keys.binary_search(key) {
             Ok(index) => self.values.get(index),
-            Err(_) => None,
+            Err(index) => {
+                if self.is_leaf {
+                    None
+                } else {
+                    self.childrens[index].search(key)
+                }
+            }
         }
     }
 }
@@ -67,7 +107,11 @@ impl BPlusTree {
 
     pub fn insert(&mut self, key: u32) {
         if let Some(node) = self.root.as_mut() {
-            node.insert_non_full(key);
+            if node.keys.len() < MAX_DEGREE - 1 {
+                node.insert_non_full(key);
+            } else {
+                node.insert_and_split(key);
+            }
         } else {
             let mut node = Node::new(true);
             node.insert_non_full(key);
@@ -133,6 +177,15 @@ mod test {
         assert_eq!(tree.get(&1), Some(&1));
         assert_eq!(tree.get(&2), Some(&2));
         assert_eq!(tree.get(&3), Some(&3));
+    }
+
+    #[test]
+    fn insert_and_split_on_root_node() {
+        let mut tree = BPlusTree::new(vec![7, 10, 15]);
+        tree.insert(8);
+
+        assert_eq!(tree.get(&8), Some(&8));
+        assert_eq!(tree.get(&18), None);
     }
 
     #[test]
