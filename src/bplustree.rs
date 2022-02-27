@@ -20,6 +20,27 @@ impl Node {
             is_leaf,
         }
     }
+
+    pub fn insert_non_full(&mut self, key: u32) {
+        match self.keys.binary_search(&key) {
+            // Ignore if key is duplicated first
+            Ok(_index) => (),
+            Err(index) => {
+                self.keys.insert(index, key);
+
+                if self.is_leaf {
+                    self.values.insert(index, key);
+                }
+            }
+        }
+    }
+
+    pub fn search(&self, key: &u32) -> Option<&u32> {
+        match self.keys.binary_search(key) {
+            Ok(index) => self.values.get(index),
+            Err(_) => None,
+        }
+    }
 }
 
 impl std::fmt::Debug for Node {
@@ -44,14 +65,22 @@ impl BPlusTree {
         tree
     }
 
-    pub fn insert(&mut self, key: u32) {}
+    pub fn insert(&mut self, key: u32) {
+        if let Some(node) = self.root.as_mut() {
+            node.insert_non_full(key);
+        } else {
+            let mut node = Node::new(true);
+            node.insert_non_full(key);
+            self.root = Some(Box::new(node));
+        }
+    }
 
     pub fn remove(&mut self, key: &u32) -> Option<u32> {
         None
     }
 
     pub fn get(&self, key: &u32) -> Option<&u32> {
-        None
+        self.root.as_ref().map_or(None, |node| node.search(key))
     }
 
     pub fn print(&self) {
@@ -86,6 +115,25 @@ impl BPlusTree {
 #[cfg(test)]
 mod test {
     use super::BPlusTree;
+
+    #[test]
+    fn get_on_empty_tree() {
+        let tree = BPlusTree::new(vec![]);
+        assert_eq!(tree.get(&2), None);
+    }
+
+    #[test]
+    fn insert_on_root_node() {
+        let mut tree = BPlusTree::new(vec![]);
+
+        tree.insert(1);
+        tree.insert(2);
+        tree.insert(3);
+
+        assert_eq!(tree.get(&1), Some(&1));
+        assert_eq!(tree.get(&2), Some(&2));
+        assert_eq!(tree.get(&3), Some(&3));
+    }
 
     #[test]
     #[ignore]
