@@ -79,21 +79,15 @@ impl Node {
     }
 
     pub fn search(&self, key: &u32) -> Option<&u32> {
-        match self.keys.binary_search(key) {
-            Ok(index) => {
-                if self.is_leaf {
-                    self.values.get(index)
-                } else {
-                    self.childrens[index].search(key)
-                }
-            }
-            Err(index) => {
-                if self.is_leaf {
-                    None
-                } else {
-                    self.childrens[index].search(key)
-                }
-            }
+        let index = match self.keys.binary_search(key) {
+            Ok(index) => index,
+            Err(index) => index,
+        };
+
+        if self.is_leaf {
+            self.values.get(index)
+        } else {
+            self.childrens[index].search(key)
         }
     }
 }
