@@ -5,8 +5,8 @@ pub struct BPlusTree {
 }
 
 struct Node {
-    numbers_of_keys: usize,    // 2t ^ h - 1.
     keys: Vec<u32>,            // At least t - 1 keys, at most 2t - 1 keys
+    values: Vec<u32>,          // Only in leaf node.
     childrens: Vec<Box<Node>>, // At least t children, at most 2t children
     is_leaf: bool,
 }
@@ -14,8 +14,8 @@ struct Node {
 impl Node {
     pub fn new(is_leaf: bool) -> Self {
         Node {
-            numbers_of_keys: 0,
             keys: vec![],
+            values: vec![],
             childrens: Vec::new(),
             is_leaf,
         }
@@ -27,14 +27,21 @@ impl std::fmt::Debug for Node {
         write!(
             f,
             "Node {{ keys: {:?}, number_of_keys: {} }}",
-            self.keys, self.numbers_of_keys
+            self.keys,
+            self.keys.len()
         )
     }
 }
 
 impl BPlusTree {
-    pub fn new() -> Self {
-        Self { root: None }
+    pub fn new(numbers: Vec<u32>) -> Self {
+        let mut tree = Self { root: None };
+
+        for i in numbers {
+            tree.insert(i);
+        }
+
+        tree
     }
 
     pub fn insert(&mut self, key: u32) {}
@@ -83,46 +90,25 @@ mod test {
     #[test]
     #[ignore]
     fn basics() {
-        let mut tree = BPlusTree::new();
-        tree.insert(2);
-        tree.insert(7);
-        tree.insert(8);
-        tree.insert(9);
-        tree.insert(4);
-        tree.insert(6);
-        tree.insert(1);
-        tree.insert(5);
-        tree.insert(3);
-        tree.insert(10);
-        tree.insert(11);
-        tree.insert(14);
-        tree.insert(16);
-        tree.insert(17);
-        tree.insert(18);
-        tree.insert(19);
-        tree.insert(20);
-        tree.insert(21);
-        tree.insert(22);
-        tree.insert(23);
-        tree.insert(24);
-        tree.insert(25);
-        tree.insert(30);
+        let mut tree = BPlusTree::new(vec![
+            2, 7, 8, 9, 4, 6, 1, 5, 3, 10, 11, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 30,
+        ]);
 
         assert_eq!(tree.get(&2), Some(&2));
-        assert_eq!(tree.get(&7), Some(&7));
-        assert_eq!(tree.get(&8), Some(&8));
-        assert_eq!(tree.get(&9), Some(&9));
-        assert_eq!(tree.get(&5), Some(&5));
-        assert_eq!(tree.get(&10), Some(&10));
-        assert_eq!(tree.get(&4), Some(&4));
-        assert_eq!(tree.get(&12), None);
-        assert_eq!(tree.get(&5), Some(&5));
+        // assert_eq!(tree.get(&7), Some(&7));
+        // assert_eq!(tree.get(&8), Some(&8));
+        // assert_eq!(tree.get(&9), Some(&9));
+        // assert_eq!(tree.get(&5), Some(&5));
+        // assert_eq!(tree.get(&10), Some(&10));
+        // assert_eq!(tree.get(&4), Some(&4));
+        // assert_eq!(tree.get(&12), None);
+        // assert_eq!(tree.get(&5), Some(&5));
 
-        tree.remove(&7);
+        // tree.remove(&7);
         // Previously, childrens linkage broke here.
-        tree.remove(&16);
-        tree.remove(&1);
-        tree.remove(&18);
+        // tree.remove(&16);
+        // tree.remove(&1);
+        // tree.remove(&18);
 
         // Fixed!
         // tree.remove(&24);
@@ -147,30 +133,10 @@ mod test {
     #[test]
     #[ignore]
     fn merge_child_before_swapping_left_child_bigget_value() {
-        let mut tree = BPlusTree::new();
-        tree.insert(10);
-        tree.insert(11);
-        tree.insert(14);
-        tree.insert(16);
-        tree.insert(17);
-        tree.insert(18);
-        tree.insert(19);
-        tree.insert(20);
-        tree.insert(21);
-        tree.insert(22);
-        tree.insert(23);
-        tree.insert(24);
-        tree.insert(25);
-        tree.insert(30);
-        tree.insert(1);
-        tree.insert(2);
-        tree.insert(15);
-        tree.insert(13);
-        tree.insert(12);
-        tree.insert(26);
-        tree.insert(27);
-        tree.insert(28);
-        tree.insert(29);
+        let mut tree = BPlusTree::new(vec![
+            10, 11, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 30, 1, 2, 15, 13, 12, 26, 27, 28,
+            29,
+        ]);
 
         tree.print();
         assert_eq!(tree.remove(&16), Some(16));
@@ -180,30 +146,9 @@ mod test {
     #[test]
     #[ignore]
     fn merge_child_before_swapping_right_child_smallest_value() {
-        let mut tree = BPlusTree::new();
-        tree.insert(2);
-        tree.insert(7);
-        tree.insert(8);
-        tree.insert(9);
-        tree.insert(4);
-        tree.insert(6);
-        tree.insert(1);
-        tree.insert(5);
-        tree.insert(3);
-        tree.insert(10);
-        tree.insert(11);
-        tree.insert(14);
-        tree.insert(16);
-        tree.insert(17);
-        tree.insert(18);
-        tree.insert(19);
-        tree.insert(20);
-        tree.insert(21);
-        tree.insert(22);
-        tree.insert(23);
-        tree.insert(24);
-        tree.insert(25);
-        tree.insert(30);
+        let mut tree = BPlusTree::new(vec![
+            2, 7, 8, 9, 4, 6, 1, 5, 3, 10, 11, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 30,
+        ]);
 
         tree.print();
         assert_eq!(tree.remove(&18), Some(18));
@@ -217,71 +162,20 @@ mod test {
     #[test]
     #[ignore]
     fn case_3a() {
-        let mut tree = BPlusTree::new();
-        tree.insert(2);
-        tree.insert(7);
-        tree.insert(8);
-        tree.insert(9);
-        tree.insert(4);
-        tree.insert(6);
-        tree.insert(1);
-        tree.insert(5);
-        tree.insert(3);
-        tree.insert(10);
-        tree.insert(11);
-        tree.insert(14);
-        tree.insert(16);
-        tree.insert(17);
-        tree.insert(18);
-        tree.insert(19);
-        tree.insert(20);
-        tree.insert(21);
-        tree.insert(22);
-        tree.insert(23);
-        tree.insert(24);
-        tree.insert(25);
-        tree.insert(30);
-        tree.insert(31);
-        tree.insert(32);
-        tree.insert(33);
-        tree.insert(34);
-        tree.insert(35);
-
+        let mut tree = BPlusTree::new(vec![
+            2, 7, 8, 9, 4, 6, 1, 5, 3, 10, 11, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 30, 31,
+            32, 33, 34, 35,
+        ]);
         assert_eq!(tree.remove(&7), Some(7));
     }
 
     #[test]
     #[ignore]
     fn case_3b() {
-        let mut tree = BPlusTree::new();
-        tree.insert(2);
-        tree.insert(7);
-        tree.insert(8);
-        tree.insert(9);
-        tree.insert(4);
-        tree.insert(6);
-        tree.insert(1);
-        tree.insert(5);
-        tree.insert(3);
-        tree.insert(10);
-        tree.insert(11);
-        tree.insert(14);
-        tree.insert(16);
-        tree.insert(17);
-        tree.insert(18);
-        tree.insert(19);
-        tree.insert(20);
-        tree.insert(21);
-        tree.insert(22);
-        tree.insert(23);
-        tree.insert(24);
-        tree.insert(25);
-        tree.insert(30);
-        tree.insert(31);
-        tree.insert(32);
-        tree.insert(33);
-        tree.insert(34);
-        tree.insert(35);
+        let mut tree = BPlusTree::new(vec![
+            2, 7, 8, 9, 4, 6, 1, 5, 3, 10, 11, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 30, 31,
+            32, 33, 34, 35,
+        ]);
 
         assert_eq!(tree.remove(&18), Some(18));
     }
@@ -289,52 +183,21 @@ mod test {
     #[test]
     #[ignore]
     fn delete_key_on_root_node_with_internal_nodes_case_a() {
-        let mut tree = BPlusTree::new();
-        tree.insert(2);
-        tree.insert(7);
-        tree.insert(8);
-        tree.insert(9);
-        tree.insert(4);
-        tree.insert(6);
-        tree.insert(1);
-        tree.insert(5);
-        tree.insert(3);
-        tree.insert(10);
-        tree.insert(11);
-        tree.insert(14);
-
+        let mut tree = BPlusTree::new(vec![2, 7, 8, 9, 4, 6, 1, 5, 3, 10, 11, 14]);
         assert_eq!(tree.remove(&7), Some(7));
     }
 
     #[test]
     #[ignore]
     fn delete_key_on_root_node_with_internal_nodes_case_b() {
-        let mut tree = BPlusTree::new();
-        tree.insert(2);
-        tree.insert(7);
-        tree.insert(8);
-        tree.insert(9);
-        tree.insert(4);
-        tree.insert(6);
-        tree.insert(1);
-        tree.insert(5);
-        tree.insert(3);
-        tree.insert(10);
-        tree.insert(11);
-        tree.insert(14);
-        tree.insert(16);
-        tree.insert(17);
-
+        let mut tree = BPlusTree::new(vec![2, 7, 8, 9, 4, 6, 1, 5, 3, 10, 11, 14, 16, 17]);
         assert_eq!(tree.remove(&7), Some(7));
     }
 
     #[test]
     #[ignore]
     fn delete_key_on_root_node() {
-        let mut tree = BPlusTree::new();
-        tree.insert(2);
-        tree.insert(7);
-        tree.insert(8);
+        let mut tree = BPlusTree::new(vec![2, 7, 8]);
 
         assert_eq!(tree.remove(&7), Some(7));
         assert_eq!(tree.remove(&8), Some(8));
@@ -345,13 +208,7 @@ mod test {
     #[test]
     #[ignore]
     fn delete_leaf_on_two_leaf_node() {
-        let mut tree = BPlusTree::new();
-        tree.insert(2);
-        tree.insert(7);
-        tree.insert(8);
-        tree.insert(9);
-        tree.insert(4);
-
+        let mut tree = BPlusTree::new(vec![2, 7, 8, 9, 4]);
         assert_eq!(tree.remove(&4), Some(4));
         assert_eq!(tree.remove(&9), Some(9));
         assert_eq!(tree.remove(&5), None);
@@ -360,14 +217,7 @@ mod test {
     #[test]
     #[ignore]
     fn delete_key_on_internal_node_case_a() {
-        let mut tree = BPlusTree::new();
-        tree.insert(2);
-        tree.insert(7);
-        tree.insert(8);
-        tree.insert(9);
-        tree.insert(4);
-        tree.insert(6);
-        tree.insert(1);
+        let mut tree = BPlusTree::new(vec![2, 7, 8, 9, 4, 6, 1]);
 
         // Actual case a
         assert_eq!(tree.remove(&4), Some(4));
@@ -376,15 +226,7 @@ mod test {
     #[test]
     #[ignore]
     fn delete_key_on_internal_node_case_b() {
-        let mut tree = BPlusTree::new();
-        tree.insert(2);
-        tree.insert(7);
-        tree.insert(8);
-        tree.insert(9);
-        tree.insert(4);
-        tree.insert(6);
-        tree.insert(1);
-        tree.insert(5);
+        let mut tree = BPlusTree::new(vec![2, 7, 8, 9, 4, 6, 1, 5]);
 
         assert_eq!(tree.remove(&2), Some(2));
 
@@ -395,16 +237,7 @@ mod test {
     #[test]
     #[ignore]
     fn delete_key_on_internal_node_case_c() {
-        let mut tree = BPlusTree::new();
-        tree.insert(2);
-        tree.insert(7);
-        tree.insert(8);
-        tree.insert(9);
-        tree.insert(4);
-        tree.insert(6);
-        tree.insert(1);
-        tree.insert(5);
-
+        let mut tree = BPlusTree::new(vec![2, 7, 8, 9, 4, 6, 1, 5]);
         assert_eq!(tree.remove(&2), Some(2));
         assert_eq!(tree.remove(&5), Some(5));
 
