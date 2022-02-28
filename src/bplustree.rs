@@ -1,13 +1,13 @@
 use std::collections::VecDeque;
 
 pub struct BPlusTree {
-    root: Option<Box<Node>>,
+    root: Option<Node>,
 }
 
 struct Node {
-    keys: Vec<u32>,            // At least t - 1 keys, at most 2t - 1 keys
-    values: Vec<u32>,          // Only in leaf node.
-    childrens: Vec<Box<Node>>, // At least t children, at most 2t children
+    keys: Vec<u32>,       // At least t - 1 keys, at most 2t - 1 keys
+    values: Vec<u32>,     // Only in leaf node.
+    childrens: Vec<Node>, // At least t children, at most 2t children
     is_leaf: bool,
 }
 
@@ -24,10 +24,10 @@ impl Node {
     }
 
     pub fn insert(&mut self, key: u32) {
-        if self.keys.len() < MAX_DEGREE - 1 {
-            self.insert_non_full(key);
-        } else {
-            self.insert_and_split(key);
+        self.insert_non_full(key);
+
+        if self.keys.len() > MAX_DEGREE - 1 {
+            self.split();
         }
     }
 
@@ -46,36 +46,32 @@ impl Node {
         }
     }
 
-    pub fn insert_and_split(&mut self, key: u32) {
-        self.insert_non_full(key);
+    pub fn split(&mut self) {
+        let mut left_node = Node::new(true);
+        let mut right_node = Node::new(true);
 
-        if self.is_leaf {
-            let mut left_node = Node::new(true);
-            let mut right_node = Node::new(true);
+        let breakpoint = (MAX_DEGREE + 1) / 2;
 
-            let breakpoint = (MAX_DEGREE + 1) / 2;
-
-            for _ in 0..breakpoint {
-                let value = self.values.remove(0);
-                self.keys.remove(0);
-                left_node.values.push(value);
-                left_node.keys.push(value);
-            }
-
-            right_node.values.push(self.values[0]);
-            right_node.keys.push(self.keys[0]);
-
-            for _ in 0..(breakpoint - 1) {
-                let value = self.values.remove(1);
-                self.keys.remove(1);
-                right_node.values.push(value);
-                right_node.keys.push(value);
-            }
-
-            self.childrens.push(Box::new(left_node));
-            self.childrens.push(Box::new(right_node));
-            self.is_leaf = false;
+        for _ in 0..breakpoint {
+            let value = self.values.remove(0);
+            self.keys.remove(0);
+            left_node.values.push(value);
+            left_node.keys.push(value);
         }
+
+        right_node.values.push(self.values[0]);
+        right_node.keys.push(self.keys[0]);
+
+        for _ in 0..(breakpoint - 1) {
+            let value = self.values.remove(1);
+            self.keys.remove(1);
+            right_node.values.push(value);
+            right_node.keys.push(value);
+        }
+
+        self.childrens.push(left_node);
+        self.childrens.push(right_node);
+        self.is_leaf = false;
     }
 
     pub fn search(&self, key: &u32) -> Option<&u32> {
@@ -120,7 +116,7 @@ impl BPlusTree {
         } else {
             let mut node = Node::new(true);
             node.insert_non_full(key);
-            self.root = Some(Box::new(node));
+            self.root = Some(node);
         }
     }
 
