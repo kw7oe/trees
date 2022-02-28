@@ -23,14 +23,6 @@ impl Node {
         }
     }
 
-    pub fn insert(&mut self, key: u32) {
-        self.insert_non_full(key);
-
-        if self.keys.len() > MAX_DEGREE - 1 {
-            self.split();
-        }
-    }
-
     pub fn insert_non_full(&mut self, key: u32) {
         match self.keys.binary_search(&key) {
             // Ignore if key is duplicated first
@@ -40,38 +32,29 @@ impl Node {
                     self.keys.insert(index, key);
                     self.values.insert(index, key);
                 } else {
-                    self.childrens[index].insert(key);
+                    self.childrens[index].insert_non_full(key);
                 }
             }
         }
     }
 
-    pub fn split(&mut self) {
-        let mut left_node = Node::new(true);
-        let mut right_node = Node::new(true);
+    pub fn split_child(&mut self, index: usize) {
+        if let Some(child) = self.childrens.get_mut(index) {
+            let mut right_node = Node::new(true);
+            let breakpoint = (MAX_DEGREE + 1) / 2;
 
-        let breakpoint = (MAX_DEGREE + 1) / 2;
+            self.values.push(child.values[breakpoint]);
+            self.keys.push(child.keys[breakpoint]);
 
-        for _ in 0..breakpoint {
-            let value = self.values.remove(0);
-            self.keys.remove(0);
-            left_node.values.push(value);
-            left_node.keys.push(value);
+            for _ in 0..breakpoint {
+                let value = child.values.remove(breakpoint + 1);
+                child.keys.remove(breakpoint + 1);
+                right_node.values.push(value);
+                right_node.keys.push(value);
+            }
+
+            self.childrens.push(right_node);
         }
-
-        right_node.values.push(self.values[0]);
-        right_node.keys.push(self.keys[0]);
-
-        for _ in 0..(breakpoint - 1) {
-            let value = self.values.remove(1);
-            self.keys.remove(1);
-            right_node.values.push(value);
-            right_node.keys.push(value);
-        }
-
-        self.childrens.push(left_node);
-        self.childrens.push(right_node);
-        self.is_leaf = false;
     }
 
     pub fn search(&self, key: &u32) -> Option<&u32> {
@@ -112,7 +95,16 @@ impl BPlusTree {
 
     pub fn insert(&mut self, key: u32) {
         if let Some(node) = self.root.as_mut() {
-            node.insert(key);
+            if node.keys.len() == MAX_DEGREE {
+                node.insert_non_full(key);
+
+                let mut new_root = Node::new(false);
+                new_root.childrens.push(self.root.take().unwrap());
+                new_root.split_child(0);
+                self.root = Some(new_root);
+            } else {
+                node.insert_non_full(key);
+            }
         } else {
             let mut node = Node::new(true);
             node.insert_non_full(key);
@@ -192,6 +184,7 @@ mod test {
     #[test]
     fn insert_on_leaf_node() {
         let mut tree = BPlusTree::new(vec![7, 10, 15, 8]);
+        tree.print();
 
         tree.insert(11);
         assert_eq!(tree.get(&11), Some(&11));
