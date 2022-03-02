@@ -24,7 +24,7 @@ impl Node {
     }
 
     pub fn insert_non_full(&mut self, key: u32) {
-        // println!("insert_non_full key {key} into {:?}", self.keys);
+        println!("insert_non_full key {key} into {:?}", self.keys);
         match self.keys.binary_search(&key) {
             // Ignore if key is duplicated first
             Ok(_index) => (),
@@ -44,20 +44,30 @@ impl Node {
     }
 
     pub fn split_child(&mut self, index: usize) {
-        // print!("parent {:?} ", self.keys);
+        print!("parent {:?} ", self.keys);
         if let Some(child) = self.childrens.get_mut(index) {
-            // println!(
-            //     "splitting child at {index} with {} children: {:?}",
-            //     child.childrens.len(),
-            //     child.keys
-            // );
+            println!(
+                "splitting child at {index} with {} children: {:?}",
+                child.childrens.len(),
+                child.keys
+            );
             let mut right_node = Node::new(child.is_leaf);
             let breakpoint = (MAX_DEGREE + 1) / 2;
+            println!(
+                "breakpoin: {breakpoint}, value: {}",
+                child.values[breakpoint]
+            );
 
             // TODO: We probably want to rewrite the following parts
             // in a more concise a clear way.
-            self.values.push(child.values[breakpoint]);
-            self.keys.push(child.keys[breakpoint]);
+            if index > self.values.len() {
+                self.values.push(child.values[breakpoint]);
+                self.keys.push(child.keys[breakpoint]);
+            } else {
+                // TODO: Add explanation why this is needed
+                self.values.insert(index, child.values[breakpoint]);
+                self.keys.insert(index, child.keys[breakpoint]);
+            }
 
             for i in 0..breakpoint {
                 let key = child.keys.remove(breakpoint);
@@ -90,12 +100,17 @@ impl Node {
                 right_node.is_leaf = false;
             }
 
-            self.childrens.push(right_node);
+            // TODO: Add explanation why this is needed
+            if index + 1 > self.childrens.len() {
+                self.childrens.push(right_node);
+            } else {
+                self.childrens.insert(index + 1, right_node);
+            }
         }
     }
 
     pub fn search(&self, key: &u32) -> Option<&u32> {
-        // print!("searching {key} on {:?}, index: ", self);
+        print!("searching {key} on {:?}, index: ", self);
         let index = match self.keys.binary_search(key) {
             Ok(index) => {
                 if self.is_leaf {
@@ -107,7 +122,7 @@ impl Node {
             Err(index) => index,
         };
 
-        // println!("{index}");
+        println!("{index}");
         if self.is_leaf {
             self.values.get(index)
         } else {
@@ -149,8 +164,6 @@ impl BPlusTree {
                 new_root.childrens.push(self.root.take().unwrap());
                 new_root.split_child(0);
                 self.root = Some(new_root);
-            } else {
-                node.insert_non_full(key);
             }
         } else {
             let mut node = Node::new(true);
