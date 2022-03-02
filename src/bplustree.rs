@@ -247,20 +247,29 @@ mod test {
 
     #[test]
     fn insert_and_split_on_level_3_leaf_node() {
-        let mut tree = BPlusTree::new(vec![7, 10, 15, 8, 11, 12, 19, 25, 30]);
+        let vec = vec![7, 10, 15, 8, 11, 12, 19, 25, 30];
+        let mut tree = BPlusTree::new(vec.clone());
 
         tree.insert(49);
         tree.print();
-        assert_eq!(tree.get(&49), Some(&49));
-        assert_eq!(tree.get(&30), Some(&30));
-        assert_eq!(tree.get(&19), Some(&19));
-        assert_eq!(tree.get(&25), Some(&25));
-        assert_eq!(tree.get(&12), Some(&12));
-        assert_eq!(tree.get(&7), Some(&7));
-        assert_eq!(tree.get(&8), Some(&8));
-        assert_eq!(tree.get(&11), Some(&11));
-        assert_eq!(tree.get(&15), Some(&15));
-        assert_eq!(tree.get(&10), Some(&10));
+
+        for v in vec {
+            assert_eq!(tree.get(&v), Some(&v));
+        }
+    }
+
+    #[test]
+    fn insert_and_split_until_it_breaks() {
+        let vec = vec![7, 10, 15, 8, 11, 12, 19, 25, 30, 49, 69, 90, 59];
+        let mut tree = BPlusTree::new(vec.clone());
+
+        tree.print();
+        tree.insert(41);
+        tree.print();
+
+        for v in vec {
+            assert_eq!(tree.get(&v), Some(&v));
+        }
     }
 
     #[test]
