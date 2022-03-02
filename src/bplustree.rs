@@ -24,7 +24,7 @@ impl Node {
     }
 
     pub fn insert_non_full(&mut self, key: u32) {
-        println!("insert_non_full key {key} into {:?}", self.keys);
+        // println!("insert_non_full key {key} into {:?}", self.keys);
         match self.keys.binary_search(&key) {
             // Ignore if key is duplicated first
             Ok(_index) => (),
@@ -44,7 +44,7 @@ impl Node {
     }
 
     pub fn split_child(&mut self, index: usize) {
-        print!("parent {:?} ", self.keys);
+        // print!("parent {:?} ", self.keys);
         if let Some(child) = self.childrens.get_mut(index) {
             println!(
                 "splitting child at {index} with {} children: {:?}",
@@ -83,8 +83,8 @@ impl Node {
                     right_node.keys.push(key);
                 }
 
-                let value = child.values.remove(breakpoint);
                 if child.is_leaf {
+                    let value = child.values.remove(breakpoint);
                     right_node.values.push(value);
                 }
             }
@@ -110,7 +110,7 @@ impl Node {
     }
 
     pub fn search(&self, key: &u32) -> Option<&u32> {
-        print!("searching {key} on {:?}, index: ", self);
+        // print!("searching {key} on {:?}, index: ", self);
         let index = match self.keys.binary_search(key) {
             Ok(index) => {
                 if self.is_leaf {
@@ -122,7 +122,7 @@ impl Node {
             Err(index) => index,
         };
 
-        println!("{index}");
+        // println!("{index}");
         if self.is_leaf {
             self.values.get(index)
         } else {
@@ -259,12 +259,12 @@ mod test {
     }
 
     #[test]
-    fn insert_and_split_on_level_3_leaf_node() {
+    fn insert_and_split_recursively_on_level_3_leaf_node() {
         let vec = vec![7, 10, 15, 8, 11, 12, 19, 25, 30];
         let mut tree = BPlusTree::new(vec.clone());
 
         tree.insert(49);
-        tree.print();
+        assert_eq!(tree.get(&49), Some(&49));
 
         for v in vec {
             assert_eq!(tree.get(&v), Some(&v));
@@ -272,14 +272,26 @@ mod test {
     }
 
     #[test]
-    fn insert_and_split_until_it_breaks() {
+    fn insert_and_split_is_reasign_to_the_right_spot() {
         let vec = vec![7, 10, 15, 8, 11, 12, 19, 25, 30, 49, 69, 90, 59];
         let mut tree = BPlusTree::new(vec.clone());
 
-        tree.print();
         tree.insert(41);
-        tree.print();
+        assert_eq!(tree.get(&41), Some(&41));
 
+        for v in vec {
+            assert_eq!(tree.get(&v), Some(&v));
+        }
+    }
+
+    #[test]
+    fn insert_and_split_on_existing_internal_node() {
+        let vec = vec![7, 10, 15, 8, 11, 12, 19, 25, 30, 49, 69, 90, 59, 41, 45];
+        let mut tree = BPlusTree::new(vec.clone());
+
+        tree.insert(42);
+        assert_eq!(tree.get(&42), Some(&42));
+        tree.print();
         for v in vec {
             assert_eq!(tree.get(&v), Some(&v));
         }
