@@ -298,6 +298,48 @@ mod test {
     }
 
     #[test]
+    fn insert_and_split_on_level_4_leaf_node() {
+        let vec = vec![
+            7, 10, 15, 8, 11, 12, 19, 25, 30, 49, 69, 90, 59, 41, 45, 42, 1, 4, 50, 52, 5, 6, 9,
+            23, 29, 26, 34,
+        ];
+        let mut tree = BPlusTree::new(vec.clone());
+
+        tree.print();
+
+        tree.insert(35);
+        assert_eq!(tree.get(&35), Some(&35));
+
+        tree.print();
+        for v in vec {
+            assert_eq!(tree.get(&v), Some(&v));
+        }
+    }
+
+    #[test]
+    fn insert_and_split_on_level_5_leaf_node() {
+        // let vec = vec![
+        //     7, 10, 15, 8, 11, 12, 19, 25, 30, 49, 69, 90, 59, 41, 45, 42, 1, 4, 50, 52, 5, 6, 9,
+        //     23, 29, 26, 34, 35, 36, 37, 38, 39, 40, 43, 44, 46, 47, 48, 51, 53, 54, 55, 56, 57, 58,
+        //     60, 61, 62, 63, 64, 65, 66, 67, 68, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82,
+        //     83, 84, 85, 86, 87, 88, 89, 91, 2, 3, 13, 14, 16, 17, 18, 20, 21, 22, 24, 27, 28, 31,
+        //     32, 33, 92, 93, 94, 95, 96, 97, 98, 99, 100,
+        // ];
+
+        let vec: Vec<u32> = (1..82).collect();
+        let mut tree = BPlusTree::new(vec.clone());
+
+        tree.print();
+        tree.insert(83);
+        assert_eq!(tree.get(&83), Some(&83));
+        tree.print();
+
+        for v in vec {
+            assert_eq!(tree.get(&v), Some(&v));
+        }
+    }
+
+    #[test]
     #[ignore]
     fn basics() {
         let mut tree = BPlusTree::new(vec![
