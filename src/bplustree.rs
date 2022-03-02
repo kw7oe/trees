@@ -33,6 +33,10 @@ impl Node {
                     self.values.insert(index, key);
                 } else {
                     self.childrens[index].insert_non_full(key);
+
+                    if self.childrens[index].keys.len() == MAX_DEGREE {
+                        self.split_child(index);
+                    }
                 }
             }
         }
@@ -47,8 +51,8 @@ impl Node {
             self.keys.push(child.keys[breakpoint]);
 
             for _ in 0..breakpoint {
-                let value = child.values.remove(breakpoint + 1);
-                child.keys.remove(breakpoint + 1);
+                let value = child.values.remove(breakpoint);
+                child.keys.remove(breakpoint);
                 right_node.values.push(value);
                 right_node.keys.push(value);
             }
@@ -58,11 +62,19 @@ impl Node {
     }
 
     pub fn search(&self, key: &u32) -> Option<&u32> {
+        // print!("searching {key} on {:?}, index: ", self);
         let index = match self.keys.binary_search(key) {
-            Ok(index) => index,
+            Ok(index) => {
+                if self.is_leaf {
+                    index
+                } else {
+                    index + 1
+                }
+            }
             Err(index) => index,
         };
 
+        // println!("{index}");
         if self.is_leaf {
             self.values.get(index)
         } else {
@@ -75,8 +87,10 @@ impl std::fmt::Debug for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Node {{ keys: {:?}, number_of_keys: {} }}",
+            "Node {{ is_leaf: {}, keys: {:?}, values: {:?}, number_of_keys: {} }}",
+            self.is_leaf,
             self.keys,
+            self.values,
             self.keys.len()
         )
     }
@@ -95,11 +109,15 @@ impl BPlusTree {
 
     pub fn insert(&mut self, key: u32) {
         if let Some(node) = self.root.as_mut() {
-            if node.keys.len() == MAX_DEGREE {
-                node.insert_non_full(key);
+            node.insert_non_full(key);
 
+            if node.keys.len() == MAX_DEGREE {
                 let mut new_root = Node::new(false);
-                new_root.childrens.push(self.root.take().unwrap());
+
+                let mut child = self.root.take().unwrap();
+                child.is_leaf = true;
+                new_root.childrens.push(child);
+
                 new_root.split_child(0);
                 self.root = Some(new_root);
             } else {
@@ -184,12 +202,8 @@ mod test {
     #[test]
     fn insert_on_leaf_node() {
         let mut tree = BPlusTree::new(vec![7, 10, 15, 8]);
-        tree.print();
-
         tree.insert(11);
         assert_eq!(tree.get(&11), Some(&11));
-
-        tree.print();
     }
 
     #[test]
@@ -203,6 +217,16 @@ mod test {
         assert_eq!(tree.get(&7), Some(&7));
         assert_eq!(tree.get(&8), Some(&8));
     }
+
+    // #[test]
+    // fn insert_and_split_on_level_3_leaf_node() {
+    //     let mut tree = BPlusTree::new(vec![7, 10, 15, 8, 11, 12]);
+
+    //     tree.insert(19);
+    //     tree.print();
+    //     assert_eq!(tree.get(&7), Some(&7));
+    //     assert_eq!(tree.get(&8), Some(&8));
+    // }
 
     #[test]
     #[ignore]
