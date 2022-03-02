@@ -24,6 +24,7 @@ impl Node {
     }
 
     pub fn insert_non_full(&mut self, key: u32) {
+        // println!("insert_non_full key {key} into {:?}", self.keys);
         match self.keys.binary_search(&key) {
             // Ignore if key is duplicated first
             Ok(_index) => (),
@@ -43,18 +44,50 @@ impl Node {
     }
 
     pub fn split_child(&mut self, index: usize) {
+        // print!("parent {:?} ", self.keys);
         if let Some(child) = self.childrens.get_mut(index) {
-            let mut right_node = Node::new(true);
+            // println!(
+            //     "splitting child at {index} with {} children: {:?}",
+            //     child.childrens.len(),
+            //     child.keys
+            // );
+            let mut right_node = Node::new(child.is_leaf);
             let breakpoint = (MAX_DEGREE + 1) / 2;
 
+            // TODO: We probably want to rewrite the following parts
+            // in a more concise a clear way.
             self.values.push(child.values[breakpoint]);
             self.keys.push(child.keys[breakpoint]);
 
-            for _ in 0..breakpoint {
+            for i in 0..breakpoint {
+                let key = child.keys.remove(breakpoint);
+
+                // If is leaf child, we split all the keys to the right node,
+                // including the key we move to parent.
+                //
+                // If is internal node, there's no need to the breakpoint key
+                // to the right node as it is available at the child level.
+                //
+                // Hence, we will skip the first key when it is not a leaf node.
+                if child.is_leaf || i != 0 {
+                    right_node.keys.push(key);
+                }
+
                 let value = child.values.remove(breakpoint);
-                child.keys.remove(breakpoint);
-                right_node.values.push(value);
-                right_node.keys.push(value);
+                if child.is_leaf {
+                    right_node.values.push(value);
+                }
+            }
+
+            // If node is leaf, means there's not children
+            if !child.is_leaf {
+                for _ in 0..breakpoint {
+                    let value = child.childrens.remove(breakpoint + 1);
+                    right_node.childrens.push(value);
+                }
+
+                // Since we now have childrens, we are not leaf node anymore.
+                right_node.is_leaf = false;
             }
 
             self.childrens.push(right_node);
@@ -113,11 +146,7 @@ impl BPlusTree {
 
             if node.keys.len() == MAX_DEGREE {
                 let mut new_root = Node::new(false);
-
-                let mut child = self.root.take().unwrap();
-                child.is_leaf = true;
-                new_root.childrens.push(child);
-
+                new_root.childrens.push(self.root.take().unwrap());
                 new_root.split_child(0);
                 self.root = Some(new_root);
             } else {
@@ -211,22 +240,28 @@ mod test {
         let mut tree = BPlusTree::new(vec![7, 10, 15, 8, 11]);
 
         tree.insert(12);
-        tree.print();
         assert_eq!(tree.get(&12), Some(&12));
-
         assert_eq!(tree.get(&7), Some(&7));
         assert_eq!(tree.get(&8), Some(&8));
     }
 
-    // #[test]
-    // fn insert_and_split_on_level_3_leaf_node() {
-    //     let mut tree = BPlusTree::new(vec![7, 10, 15, 8, 11, 12]);
+    #[test]
+    fn insert_and_split_on_level_3_leaf_node() {
+        let mut tree = BPlusTree::new(vec![7, 10, 15, 8, 11, 12, 19, 25, 30]);
 
-    //     tree.insert(19);
-    //     tree.print();
-    //     assert_eq!(tree.get(&7), Some(&7));
-    //     assert_eq!(tree.get(&8), Some(&8));
-    // }
+        tree.insert(49);
+        tree.print();
+        assert_eq!(tree.get(&49), Some(&49));
+        assert_eq!(tree.get(&30), Some(&30));
+        assert_eq!(tree.get(&19), Some(&19));
+        assert_eq!(tree.get(&25), Some(&25));
+        assert_eq!(tree.get(&12), Some(&12));
+        assert_eq!(tree.get(&7), Some(&7));
+        assert_eq!(tree.get(&8), Some(&8));
+        assert_eq!(tree.get(&11), Some(&11));
+        assert_eq!(tree.get(&15), Some(&15));
+        assert_eq!(tree.get(&10), Some(&10));
+    }
 
     #[test]
     #[ignore]
