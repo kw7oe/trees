@@ -141,9 +141,7 @@ impl Node {
         println!("non_leaf: found key at {index}");
         self.keys.remove(index);
 
-        if self.keys.len() > MAX_DEGREE / 2 {
-            self.childrens[index + 1].remove(&key)
-        } else {
+        if self.childrens[index + 1].keys.len() == (MAX_DEGREE / 2) - 1 {
             // Case 2b
             let left_sibling = self.childrens.get_mut(index).unwrap();
 
@@ -155,6 +153,8 @@ impl Node {
             self.childrens[index + 1].values.insert(0, steal_value);
 
             println!("{:?}", self.childrens[index + 1]);
+            self.childrens[index + 1].remove(&key)
+        } else {
             self.childrens[index + 1].remove(&key)
         }
     }
@@ -406,18 +406,16 @@ mod test {
     #[test]
     fn delete_key_case1b() {
         let mut vec = vec![
-            7, 8, 9, 4, 6, 1, 5, 3, 10, 11, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 30,
+            5, 26, 25, 20, 27, 28, 29, 30, 31, 1, 15, 32, 33, 34, 35, 36, 2, 3, 4,
         ];
         let mut tree = BPlusTree::new(vec.clone());
         tree.print();
-        tree.remove(&24);
-
-        tree.print();
-        assert_eq!(tree.remove(&23), Some(23));
-        assert_eq!(tree.get(&23), None);
+        tree.remove(&35);
+        tree.remove(&1);
+        tree.remove(&2);
         tree.print();
 
-        vec.retain(|&x| x != 24 && x != 23);
+        vec.retain(|&x| x != 35 && x != 1 && x != 2);
         for v in vec {
             assert_eq!(tree.get(&v), Some(&v));
         }
@@ -439,6 +437,27 @@ mod test {
     }
 
     #[test]
+    #[ignore]
+    fn delete_key_case2c() {
+        let mut vec = vec![
+            7, 8, 9, 4, 6, 1, 5, 3, 10, 11, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 30,
+        ];
+        let mut tree = BPlusTree::new(vec.clone());
+        tree.remove(&24);
+
+        tree.print();
+        assert_eq!(tree.remove(&23), Some(23));
+        assert_eq!(tree.get(&23), None);
+        tree.print();
+
+        vec.retain(|&x| x != 24 && x != 23);
+        for v in vec {
+            assert_eq!(tree.get(&v), Some(&v));
+        }
+    }
+
+    #[test]
+    #[ignore]
     fn delete_key_case3() {
         let mut vec = vec![2, 7, 8, 9, 10, 12];
         let mut tree = BPlusTree::new(vec.clone());
