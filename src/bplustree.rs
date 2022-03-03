@@ -129,6 +129,26 @@ impl Node {
             self.childrens[index].search(key)
         }
     }
+
+    pub fn remove(&mut self, key: &u32) -> Option<u32> {
+        match self.keys.binary_search(key) {
+            Ok(index) => {
+                if self.is_leaf {
+                    let value = self.values.remove(index);
+                    self.keys.remove(index);
+                    Some(value)
+                } else {
+                    // Recursively look into children
+                    // as well as remove from parent.
+                    None
+                }
+            }
+            Err(_index) => {
+                // Need to look for childrens as well
+                None
+            }
+        }
+    }
 }
 
 impl std::fmt::Debug for Node {
@@ -173,7 +193,7 @@ impl BPlusTree {
     }
 
     pub fn remove(&mut self, key: &u32) -> Option<u32> {
-        None
+        self.root.as_mut().map_or(None, |node| node.remove(key))
     }
 
     pub fn get(&self, key: &u32) -> Option<&u32> {
@@ -331,8 +351,8 @@ mod test {
 
         assert_eq!(tree.remove(&7), Some(7));
         assert_eq!(tree.remove(&8), Some(8));
-        // assert_eq!(tree.remove(&1), None);
-        // assert_eq!(tree.remove(&8), None);
+        assert_eq!(tree.remove(&1), None);
+        assert_eq!(tree.remove(&8), None);
     }
 
     #[test]
