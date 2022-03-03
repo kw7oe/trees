@@ -143,9 +143,13 @@ impl Node {
                     None
                 }
             }
-            Err(_index) => {
+            Err(index) => {
                 // Need to look for childrens as well
-                None
+                if self.is_leaf {
+                    None
+                } else {
+                    self.childrens[index].remove(key)
+                }
             }
         }
     }
@@ -356,6 +360,22 @@ mod test {
     }
 
     #[test]
+    fn delete_key_on_level_2_leaf_node() {
+        let mut vec = vec![2, 7, 8, 9, 4, 6, 1, 5, 3];
+        let mut tree = BPlusTree::new(vec.clone());
+
+        tree.print();
+        assert_eq!(tree.remove(&7), Some(7));
+        assert_eq!(tree.get(&7), None);
+        tree.print();
+
+        vec.remove(1);
+        for v in vec {
+            assert_eq!(tree.get(&v), Some(&v));
+        }
+    }
+
+    #[test]
     #[ignore]
     fn basics() {
         let mut tree = BPlusTree::new(vec![
@@ -446,20 +466,6 @@ mod test {
         ]);
 
         assert_eq!(tree.remove(&18), Some(18));
-    }
-
-    #[test]
-    #[ignore]
-    fn delete_key_on_root_node_with_internal_nodes_case_a() {
-        let mut tree = BPlusTree::new(vec![2, 7, 8, 9, 4, 6, 1, 5, 3, 10, 11, 14]);
-        assert_eq!(tree.remove(&7), Some(7));
-    }
-
-    #[test]
-    #[ignore]
-    fn delete_key_on_root_node_with_internal_nodes_case_b() {
-        let mut tree = BPlusTree::new(vec![2, 7, 8, 9, 4, 6, 1, 5, 3, 10, 11, 14, 16, 17]);
-        assert_eq!(tree.remove(&7), Some(7));
     }
 
     #[test]
