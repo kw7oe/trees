@@ -46,17 +46,17 @@ impl Node {
     pub fn split_child(&mut self, index: usize) {
         // print!("parent {:?} ", self.keys);
         if let Some(child) = self.childrens.get_mut(index) {
-            println!(
-                "splitting child at {index} with {} children: {:?}",
-                child.childrens.len(),
-                child.keys
-            );
+            // println!(
+            //     "splitting child at {index} with {} children: {:?}",
+            //     child.childrens.len(),
+            //     child.keys
+            // );
             let mut right_node = Node::new(child.is_leaf);
             let breakpoint = (MAX_DEGREE + 1) / 2;
-            println!(
-                "breakpoin: {breakpoint}, value: {}",
-                child.values[breakpoint]
-            );
+            // println!(
+            //     "breakpoin: {breakpoint}, value: {}",
+            //     child.values[breakpoint]
+            // );
 
             // TODO: We probably want to rewrite the following parts
             // in a more concise a clear way.
@@ -291,7 +291,6 @@ mod test {
 
         tree.insert(42);
         assert_eq!(tree.get(&42), Some(&42));
-        tree.print();
         for v in vec {
             assert_eq!(tree.get(&v), Some(&v));
         }
@@ -305,12 +304,9 @@ mod test {
         ];
         let mut tree = BPlusTree::new(vec.clone());
 
-        tree.print();
-
         tree.insert(35);
         assert_eq!(tree.get(&35), Some(&35));
 
-        tree.print();
         for v in vec {
             assert_eq!(tree.get(&v), Some(&v));
         }
@@ -318,25 +314,25 @@ mod test {
 
     #[test]
     fn insert_and_split_on_level_5_leaf_node() {
-        // let vec = vec![
-        //     7, 10, 15, 8, 11, 12, 19, 25, 30, 49, 69, 90, 59, 41, 45, 42, 1, 4, 50, 52, 5, 6, 9,
-        //     23, 29, 26, 34, 35, 36, 37, 38, 39, 40, 43, 44, 46, 47, 48, 51, 53, 54, 55, 56, 57, 58,
-        //     60, 61, 62, 63, 64, 65, 66, 67, 68, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82,
-        //     83, 84, 85, 86, 87, 88, 89, 91, 2, 3, 13, 14, 16, 17, 18, 20, 21, 22, 24, 27, 28, 31,
-        //     32, 33, 92, 93, 94, 95, 96, 97, 98, 99, 100,
-        // ];
-
         let vec: Vec<u32> = (1..82).collect();
         let mut tree = BPlusTree::new(vec.clone());
 
-        tree.print();
         tree.insert(82);
         assert_eq!(tree.get(&82), Some(&82));
-        tree.print();
 
         for v in vec {
             assert_eq!(tree.get(&v), Some(&v));
         }
+    }
+
+    #[test]
+    fn delete_key_on_root_node() {
+        let mut tree = BPlusTree::new(vec![2, 7, 8]);
+
+        assert_eq!(tree.remove(&7), Some(7));
+        assert_eq!(tree.remove(&8), Some(8));
+        // assert_eq!(tree.remove(&1), None);
+        // assert_eq!(tree.remove(&8), None);
     }
 
     #[test]
@@ -444,17 +440,6 @@ mod test {
     fn delete_key_on_root_node_with_internal_nodes_case_b() {
         let mut tree = BPlusTree::new(vec![2, 7, 8, 9, 4, 6, 1, 5, 3, 10, 11, 14, 16, 17]);
         assert_eq!(tree.remove(&7), Some(7));
-    }
-
-    #[test]
-    #[ignore]
-    fn delete_key_on_root_node() {
-        let mut tree = BPlusTree::new(vec![2, 7, 8]);
-
-        assert_eq!(tree.remove(&7), Some(7));
-        assert_eq!(tree.remove(&8), Some(8));
-        assert_eq!(tree.remove(&1), None);
-        assert_eq!(tree.remove(&8), None);
     }
 
     #[test]
