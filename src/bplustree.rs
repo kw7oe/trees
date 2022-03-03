@@ -140,6 +140,7 @@ impl Node {
         self.keys.remove(index);
 
         if self.childrens[index + 1].keys.len() == (max_degree / 2) - 1 {
+            println!("Case 2b");
             // Case 2b
             let left_sibling = self.childrens.get_mut(index).unwrap();
 
@@ -173,7 +174,28 @@ impl Node {
                 if self.is_leaf {
                     None
                 } else {
-                    self.childrens[index].remove(key, max_degree)
+                    let result = self.childrens[index].remove(key, max_degree);
+                    let min_key = (max_degree / 2) - 1;
+
+                    if self.childrens[index].keys.len() == min_key {
+                        println!("Case 1b: {min_key}");
+                        let sibling_index = index + 1;
+                        let right_sibling = self.childrens.get_mut(sibling_index).unwrap();
+
+                        let steal_key = right_sibling.keys.remove(0);
+                        self.keys[index] = right_sibling.keys[0];
+
+                        if right_sibling.is_leaf {
+                            let steal_value = right_sibling.values.remove(0);
+                            self.childrens[index].values.push(steal_value);
+                        }
+
+                        // Due to borrow checker, this have to be placed here instead
+                        // of on top.
+                        self.childrens[index].keys.push(steal_key);
+                    }
+
+                    result
                 }
             }
         }
@@ -395,7 +417,9 @@ mod test {
         let mut vec = vec![2, 7, 8, 9, 4, 6, 1, 5, 3];
         let mut tree = BPlusTree::new(vec.clone(), 4);
 
+        tree.print();
         assert_eq!(tree.remove(&7), Some(7));
+        tree.print();
         assert_eq!(tree.get(&7), None);
 
         vec.remove(1);
