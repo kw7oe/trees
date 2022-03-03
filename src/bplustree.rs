@@ -177,7 +177,9 @@ impl Node {
                     let result = self.childrens[index].remove(key, max_degree);
                     let min_key = (max_degree / 2) - 1;
 
-                    if self.childrens[index].keys.len() == min_key {
+                    // Plus one since we deleted, but we want to check the number of keys
+                    // before we delete.
+                    if self.childrens[index].keys.len() + 1 == min_key {
                         println!("Case 1b: {min_key}");
                         let sibling_index = index + 1;
                         let right_sibling = self.childrens.get_mut(sibling_index).unwrap();
@@ -417,9 +419,7 @@ mod test {
         let mut vec = vec![2, 7, 8, 9, 4, 6, 1, 5, 3];
         let mut tree = BPlusTree::new(vec.clone(), 4);
 
-        tree.print();
         assert_eq!(tree.remove(&7), Some(7));
-        tree.print();
         assert_eq!(tree.get(&7), None);
 
         vec.remove(1);
@@ -433,9 +433,7 @@ mod test {
         let mut vec = vec![15, 25, 35, 5, 45, 20, 30, 55, 40];
         let mut tree = BPlusTree::new(vec.clone(), 3);
 
-        tree.print();
         assert_eq!(tree.remove(&5), Some(5));
-        tree.print();
 
         vec.retain(|&x| x != 5);
         for v in vec {
