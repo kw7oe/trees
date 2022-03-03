@@ -140,23 +140,38 @@ impl Node {
         println!("non_leaf: found key at {index}");
         self.keys.remove(index);
 
-        if self.childrens[index + 1].keys.len() == (max_degree / 2) - 1 {
+        let min_key = self.min_key(max_degree);
+
+        if self.childrens[index + 1].keys.len() == min_key {
             println!("Case 2b: {:?}", self.childrens[index + 1]);
             // Case 2b
             let left_sibling = self.childrens.get_mut(index).unwrap();
 
             let steal_key = left_sibling.keys.pop().unwrap();
+
             let steal_value = left_sibling.values.pop().unwrap();
 
             self.keys.insert(index, steal_key);
             self.childrens[index + 1].keys.insert(0, steal_key);
             self.childrens[index + 1].values.insert(0, steal_value);
-
-            println!("{:?}", self.childrens[index + 1]);
             self.childrens[index + 1].remove(&key, max_degree)
         } else {
-            self.childrens[index + 1].remove(&key, max_degree)
+            println!("Case 2a: {:?}", self.childrens[index + 1]);
+            let result = self.childrens[index + 1].remove(&key, max_degree);
+            self.keys.insert(index, self.childrens[index + 1].keys[0]);
+
+            result
         }
+    }
+
+    fn min_key(&self, max_degree: usize) -> usize {
+        let mut min_key = (max_degree / 2) - 1;
+
+        if min_key == 0 {
+            min_key = 1;
+        }
+
+        min_key
     }
 
     pub fn remove(&mut self, key: &u32, max_degree: usize) -> Option<u32> {
@@ -176,11 +191,7 @@ impl Node {
                     None
                 } else {
                     let result = self.childrens[index].remove(key, max_degree);
-                    let mut min_key = (max_degree / 2) - 1;
-
-                    if min_key == 0 {
-                        min_key = 1;
-                    }
+                    let min_key = self.min_key(max_degree);
 
                     // Plus one since we deleted, but we want to check the number of keys
                     // before we delete.
@@ -448,6 +459,24 @@ mod test {
     }
 
     #[test]
+    fn delete_key_case2a() {
+        let mut vec = vec![15, 25, 35, 5, 45, 20, 30, 55, 40];
+        let mut tree = BPlusTree::new(vec.clone(), 3);
+        tree.remove(&40);
+        tree.remove(&5);
+
+        tree.print();
+        assert_eq!(tree.remove(&45), Some(45));
+        assert_eq!(tree.get(&45), None);
+        tree.print();
+
+        vec.retain(|&x| x != 40 && x != 5 && x != 45);
+        for v in vec {
+            assert_eq!(tree.get(&v), Some(&v));
+        }
+    }
+
+    #[test]
     fn delete_key_case2b() {
         let mut vec = vec![2, 7, 8, 9, 4, 6, 1, 5, 3];
         let mut tree = BPlusTree::new(vec.clone(), 4);
@@ -486,20 +515,21 @@ mod test {
     fn delete_key_case3() {
         let vec = vec![15, 25, 35, 5, 45, 20, 30, 55, 40];
         let mut tree = BPlusTree::new(vec.clone(), 3);
-
-        tree.print();
         tree.remove(&40);
-        tree.print();
         tree.remove(&5);
-        tree.print();
         tree.remove(&45);
-        tree.print();
         tree.remove(&35);
+        tree.print();
+        tree.remove(&25);
 
         tree.print();
+        assert_eq!(tree.remove(&55), Some(55));
+        assert_eq!(tree.get(&55), None);
+        tree.print();
 
-        // for v in vec {
-        //     assert_eq!(tree.get(&v), Some(&v));
-        // }
+        let vec = vec![15, 20, 30];
+        for v in vec {
+            assert_eq!(tree.get(&v), Some(&v));
+        }
     }
 }
