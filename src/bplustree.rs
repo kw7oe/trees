@@ -52,7 +52,7 @@ impl Node {
             //     child.keys
             // );
             let mut right_node = Node::new(child.is_leaf);
-            let breakpoint = (MAX_DEGREE + 1) / 2;
+            let breakpoint = MAX_DEGREE / 2;
             // println!(
             //     "breakpoin: {breakpoint}, value: {}",
             //     child.values[breakpoint]
@@ -60,12 +60,16 @@ impl Node {
 
             // TODO: We probably want to rewrite the following parts
             // in a more concise a clear way.
-            if index > self.values.len() {
-                self.values.push(child.values[breakpoint]);
+            if index > self.keys.len() {
+                if self.is_leaf {
+                    self.values.push(child.values[breakpoint]);
+                }
                 self.keys.push(child.keys[breakpoint]);
             } else {
                 // TODO: Add explanation why this is needed
-                self.values.insert(index, child.values[breakpoint]);
+                if self.is_leaf {
+                    self.values.insert(index, child.values[breakpoint]);
+                }
                 self.keys.insert(index, child.keys[breakpoint]);
             }
 
@@ -98,6 +102,7 @@ impl Node {
 
                 // Since we now have childrens, we are not leaf node anymore.
                 right_node.is_leaf = false;
+                right_node.values.clear();
             }
 
             // TODO: Add explanation why this is needed
@@ -130,7 +135,32 @@ impl Node {
         }
     }
 
+    pub fn remove_from_internals(&mut self, index: usize) -> Option<u32> {
+        let key = self.keys[index];
+
+        println!("non_leaf: found key at {index}");
+        self.keys.remove(index);
+
+        if self.keys.len() > MAX_DEGREE / 2 {
+            self.childrens[index + 1].remove(&key)
+        } else {
+            // Case 2b
+            let left_sibling = self.childrens.get_mut(index).unwrap();
+
+            let steal_key = left_sibling.keys.pop().unwrap();
+            let steal_value = left_sibling.values.pop().unwrap();
+
+            self.keys.insert(index, steal_key);
+            self.childrens[index + 1].keys.insert(0, steal_key);
+            self.childrens[index + 1].values.insert(0, steal_value);
+
+            println!("{:?}", self.childrens[index + 1]);
+            self.childrens[index + 1].remove(&key)
+        }
+    }
+
     pub fn remove(&mut self, key: &u32) -> Option<u32> {
+        println!("Removing {key} from {:?}", self);
         match self.keys.binary_search(key) {
             Ok(index) => {
                 if self.is_leaf {
@@ -138,13 +168,10 @@ impl Node {
                     self.keys.remove(index);
                     Some(value)
                 } else {
-                    // Recursively look into children
-                    // as well as remove from parent.
-                    None
+                    self.remove_from_internals(index)
                 }
             }
             Err(index) => {
-                // Need to look for childrens as well
                 if self.is_leaf {
                     None
                 } else {
@@ -197,7 +224,10 @@ impl BPlusTree {
     }
 
     pub fn remove(&mut self, key: &u32) -> Option<u32> {
-        self.root.as_mut().map_or(None, |node| node.remove(key))
+        self.root.as_mut().map_or(None, |node| {
+            let result = node.remove(key);
+            result
+        })
     }
 
     pub fn get(&self, key: &u32) -> Option<&u32> {
@@ -360,16 +390,64 @@ mod test {
     }
 
     #[test]
-    fn delete_key_on_level_2_leaf_node() {
+    fn delete_key_case1a() {
         let mut vec = vec![2, 7, 8, 9, 4, 6, 1, 5, 3];
         let mut tree = BPlusTree::new(vec.clone());
 
-        tree.print();
         assert_eq!(tree.remove(&7), Some(7));
         assert_eq!(tree.get(&7), None);
-        tree.print();
 
         vec.remove(1);
+        for v in vec {
+            assert_eq!(tree.get(&v), Some(&v));
+        }
+    }
+
+    #[test]
+    fn delete_key_case1b() {
+        let mut vec = vec![
+            7, 8, 9, 4, 6, 1, 5, 3, 10, 11, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 30,
+        ];
+        let mut tree = BPlusTree::new(vec.clone());
+        tree.print();
+        tree.remove(&24);
+
+        tree.print();
+        assert_eq!(tree.remove(&23), Some(23));
+        assert_eq!(tree.get(&23), None);
+        tree.print();
+
+        vec.retain(|&x| x != 24 && x != 23);
+        for v in vec {
+            assert_eq!(tree.get(&v), Some(&v));
+        }
+    }
+
+    #[test]
+    fn delete_key_case2b() {
+        let mut vec = vec![2, 7, 8, 9, 4, 6, 1, 5, 3];
+        let mut tree = BPlusTree::new(vec.clone());
+        tree.remove(&7);
+
+        assert_eq!(tree.remove(&6), Some(6));
+        assert_eq!(tree.get(&6), None);
+
+        vec.retain(|&x| x != 7 && x != 6);
+        for v in vec {
+            assert_eq!(tree.get(&v), Some(&v));
+        }
+    }
+
+    #[test]
+    fn delete_key_case3() {
+        let mut vec = vec![2, 7, 8, 9, 10, 12];
+        let mut tree = BPlusTree::new(vec.clone());
+        tree.remove(&7);
+
+        assert_eq!(tree.remove(&2), Some(2));
+        assert_eq!(tree.get(&2), None);
+
+        vec.retain(|&x| x != 7 && x != 2);
         for v in vec {
             assert_eq!(tree.get(&v), Some(&v));
         }
