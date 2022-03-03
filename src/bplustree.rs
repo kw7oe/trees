@@ -406,11 +406,14 @@ mod test {
 
     #[test]
     fn delete_key_case1b() {
-        let mut vec = vec![15, 20, 5, 25, 30, 40, 45, 55];
+        let mut vec = vec![15, 25, 35, 5, 45, 20, 30, 55, 40];
         let mut tree = BPlusTree::new(vec.clone(), 3);
+
+        tree.print();
+        assert_eq!(tree.remove(&5), Some(5));
         tree.print();
 
-        // vec.retain(|&x| x != 35 && x != 1 && x != 2);
+        vec.retain(|&x| x != 5);
         for v in vec {
             assert_eq!(tree.get(&v), Some(&v));
         }
