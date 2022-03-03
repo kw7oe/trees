@@ -330,8 +330,8 @@ mod test {
         let mut tree = BPlusTree::new(vec.clone());
 
         tree.print();
-        tree.insert(83);
-        assert_eq!(tree.get(&83), Some(&83));
+        tree.insert(82);
+        assert_eq!(tree.get(&82), Some(&82));
         tree.print();
 
         for v in vec {
