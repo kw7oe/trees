@@ -143,18 +143,39 @@ impl Node {
         let min_key = self.min_key(max_degree);
 
         if self.childrens[index + 1].keys.len() == min_key {
-            println!("Case 2b: {:?}", self.childrens[index + 1]);
-            // Case 2b
-            let left_sibling = self.childrens.get_mut(index).unwrap();
+            if self.childrens[index + 1].is_leaf {
+                println!("Case 2b: {:?}", self.childrens[index + 1]);
+                // Case 2b
+                let left_sibling = self.childrens.get_mut(index).unwrap();
 
-            let steal_key = left_sibling.keys.pop().unwrap();
+                let steal_key = left_sibling.keys.pop().unwrap();
 
-            let steal_value = left_sibling.values.pop().unwrap();
+                let steal_value = left_sibling.values.pop().unwrap();
 
-            self.keys.insert(index, steal_key);
-            self.childrens[index + 1].keys.insert(0, steal_key);
-            self.childrens[index + 1].values.insert(0, steal_value);
-            self.childrens[index + 1].remove(&key, max_degree)
+                self.keys.insert(index, steal_key);
+                self.childrens[index + 1].keys.insert(0, steal_key);
+                self.childrens[index + 1].values.insert(0, steal_value);
+            }
+
+            let result = self.childrens[index + 1].remove(&key, max_degree);
+
+            // This mean that the actual remove happen at self children
+            // children. Hence, we want to pick an inorder successor to
+            // replace the key we just removed.
+            if !self.childrens[index + 1].is_leaf {
+                // Case 2c
+                println!("Case 2c: {:?}", self.childrens[index + 1]);
+                let mut node = &self.childrens[index + 1];
+
+                while !node.childrens.is_empty() {
+                    node = &node.childrens[0];
+                }
+
+                println!("found successor: {}", node.keys[0]);
+                self.keys.insert(index, node.keys[0]);
+            }
+
+            result
         } else {
             println!("Case 2a: {:?}", self.childrens[index + 1]);
             let result = self.childrens[index + 1].remove(&key, max_degree);
