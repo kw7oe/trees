@@ -142,18 +142,16 @@ impl Node {
 
         let min_key = self.min_key(max_degree);
         let child_key = self.childrens[index + 1].keys.len();
+        let result = self.childrens[index + 1].remove(&key, max_degree);
 
-        let result = if child_key == min_key {
+        if child_key == min_key {
             if self.childrens[index + 1].is_leaf {
+                println!("Case 2b: {:?}", self.childrens[index + 1]);
                 self.fill_with_immediate_sibling(index);
             }
-
-            self.childrens[index + 1].remove(&key, max_degree)
         } else {
             println!("Case 2a: {:?}", self.childrens[index + 1]);
-            let result = self.childrens[index + 1].remove(&key, max_degree);
             self.fill_with_inorder_successor(index);
-            result
         };
 
         // This mean that the actual remove happen at self children
@@ -171,13 +169,12 @@ impl Node {
     }
 
     pub fn fill_with_immediate_sibling(&mut self, index: usize) {
-        println!("Case 2b: {:?}", self.childrens[index + 1]);
         // Case 2b
         let left_sibling = self.childrens.get_mut(index).unwrap();
-
         let steal_key = left_sibling.keys.pop().unwrap();
-
         let steal_value = left_sibling.values.pop().unwrap();
+
+        println!("Steal {steal_key} from left sibling {:?}...", left_sibling);
 
         self.keys.insert(index, steal_key);
         self.childrens[index + 1].keys.insert(0, steal_key);
