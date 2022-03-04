@@ -141,8 +141,9 @@ impl Node {
         self.keys.remove(index);
 
         let min_key = self.min_key(max_degree);
+        let child_key = self.childrens[index + 1].keys.len();
 
-        let result = if self.childrens[index + 1].keys.len() == min_key {
+        let result = if child_key == min_key {
             if self.childrens[index + 1].is_leaf {
                 self.fill_with_immediate_sibling(index);
             }
@@ -161,7 +162,7 @@ impl Node {
         if !self.childrens[index + 1].is_leaf {
             println!("Case 2c: {:?}", self.childrens[index + 1]);
 
-            if self.childrens[index + 1].keys.len() == min_key {
+            if child_key == min_key {
                 self.fill_with_inorder_successor(index);
             }
         }
@@ -185,7 +186,6 @@ impl Node {
 
     pub fn fill_with_inorder_successor(&mut self, index: usize) {
         let node = &self.childrens[index + 1];
-
         let mut indexes = vec![];
         for (i, n) in node.childrens.iter().enumerate() {
             if n.keys.is_empty() {
@@ -200,13 +200,24 @@ impl Node {
             removed_elem += 1;
         }
 
-        let mut node = &self.childrens[index + 1];
-        while !node.childrens.is_empty() {
-            node = &node.childrens[0];
+        let mut successor = &self.childrens[index + 1];
+        while !successor.childrens.is_empty() {
+            successor = &successor.childrens[0];
         }
 
-        println!("found successor: {:?}", node);
-        self.keys.insert(index, node.keys[0]);
+        println!("found successor: {:?}", successor);
+        self.keys.insert(index, successor.keys[0]);
+
+        // We need to see if our child internal node contain the key
+        // that we have just inserted. If yes, remove it.
+        if !self.childrens[index + 1].is_leaf {
+            if let Ok(index) = self.childrens[index + 1]
+                .keys
+                .binary_search(&successor.keys[0])
+            {
+                self.childrens[index + 1].keys.remove(index);
+            }
+        }
     }
 
     fn min_key(&self, max_degree: usize) -> usize {
