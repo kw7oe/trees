@@ -282,17 +282,20 @@ impl Node {
         };
 
         if !self.is_leaf && !self.keys.is_empty() {
-            let mut right_index = match self.keys.binary_search(key) {
+            let index = match self.keys.binary_search(key) {
                 Ok(index) => index,
                 Err(index) => index,
             };
 
-            let left_index = if right_index == self.childrens.len() - 1 {
-                right_index - 1
-            } else {
-                right_index = right_index + 1;
-                right_index - 1
-            };
+            let mut left_index = index;
+            let mut right_index = index;
+            if index == 0 {
+                right_index += 1;
+            }
+
+            if index == self.childrens.len() - 1 {
+                left_index -= 1
+            }
 
             if !self.childrens[right_index].is_leaf {
                 if self.childrens[right_index].keys.is_empty()
@@ -551,7 +554,6 @@ mod test {
         let mut tree = BPlusTree::new(vec.clone(), 3);
 
         assert_eq!(tree.remove(&5), Some(5));
-        tree.print();
 
         vec.retain(|&x| x != 5);
         for v in vec {
@@ -566,10 +568,8 @@ mod test {
         tree.remove(&40);
         tree.remove(&5);
 
-        tree.print();
         assert_eq!(tree.remove(&45), Some(45));
         assert_eq!(tree.get(&45), None);
-        tree.print();
 
         vec.retain(|&x| x != 40 && x != 5 && x != 45);
         for v in vec {
@@ -585,7 +585,6 @@ mod test {
 
         assert_eq!(tree.remove(&6), Some(6));
         assert_eq!(tree.get(&6), None);
-        tree.print();
 
         vec.retain(|&x| x != 7 && x != 6);
         for v in vec {
@@ -601,9 +600,7 @@ mod test {
         let mut tree = BPlusTree::new(vec.clone(), 4);
         tree.remove(&24);
 
-        tree.print();
         assert_eq!(tree.remove(&23), Some(23));
-        tree.print();
         assert_eq!(tree.get(&23), None);
 
         vec.retain(|&x| x != 24 && x != 23);
@@ -620,17 +617,25 @@ mod test {
         tree.remove(&5);
         tree.remove(&45);
         tree.remove(&35);
-        tree.print();
         tree.remove(&25);
 
-        tree.print();
         assert_eq!(tree.remove(&55), Some(55));
         assert_eq!(tree.get(&55), None);
-        tree.print();
 
         let vec = vec![15, 20, 30];
         for v in vec {
             assert_eq!(tree.get(&v), Some(&v));
+        }
+    }
+
+    #[test]
+    fn delete_key() {
+        let vec: Vec<u32> = (1..20).collect();
+        let mut tree = BPlusTree::new(vec.clone(), 4);
+
+        for v in vec {
+            tree.print();
+            assert_eq!(tree.remove(&v), Some(v));
         }
     }
 }
