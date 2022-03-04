@@ -157,7 +157,7 @@ impl Node {
         // This mean that the actual remove happen at self children
         // children. Hence, we want to pick an inorder successor to
         // replace the key we just removed.
-        if !self.childrens[index + 1].is_leaf {
+        if self.childrens.len() > index + 1 && !self.childrens[index + 1].is_leaf {
             println!("Case 2c: {:?}", self.childrens[index + 1]);
 
             if child_key == min_key {
@@ -171,14 +171,18 @@ impl Node {
     pub fn fill_with_immediate_sibling(&mut self, index: usize) {
         // Case 2b
         let left_sibling = self.childrens.get_mut(index).unwrap();
-        let steal_key = left_sibling.keys.pop().unwrap();
-        let steal_value = left_sibling.values.pop().unwrap();
 
-        println!("Steal {steal_key} from left sibling {:?}...", left_sibling);
-
-        self.keys.insert(index, steal_key);
-        self.childrens[index + 1].keys.insert(0, steal_key);
-        self.childrens[index + 1].values.insert(0, steal_value);
+        if left_sibling.keys.len() > 1 {
+            let steal_key = left_sibling.keys.pop().unwrap();
+            let steal_value = left_sibling.values.pop().unwrap();
+            println!("Steal {steal_key} from left sibling {:?}...", left_sibling);
+            self.keys.insert(index, steal_key);
+            self.childrens[index + 1].keys.insert(0, steal_key);
+            self.childrens[index + 1].values.insert(0, steal_value);
+        } else {
+            println!("Case 3 internal");
+            self.childrens.remove(index + 1);
+        }
     }
 
     pub fn fill_with_inorder_successor(&mut self, index: usize) {
@@ -229,7 +233,7 @@ impl Node {
 
     pub fn remove(&mut self, key: &u32, max_degree: usize) -> Option<u32> {
         println!("Removing {key} from {:?}", self);
-        match self.keys.binary_search(key) {
+        let result = match self.keys.binary_search(key) {
             Ok(index) => {
                 if self.is_leaf {
                     let value = self.values.remove(index);
@@ -250,30 +254,63 @@ impl Node {
                     // before we delete.
                     if self.childrens[index].keys.len() + 1 == min_key {
                         let sibling_index = index + 1;
-                        let right_sibling = self.childrens.get_mut(sibling_index).unwrap();
+                        if self.childrens.len() > sibling_index {
+                            let right_sibling = self.childrens.get_mut(sibling_index).unwrap();
 
-                        if right_sibling.keys.len() > 1 {
-                            println!("Case 1b: {min_key}");
-                            println!("Steal from right sibling: {:?}", right_sibling);
+                            if right_sibling.keys.len() > 1 {
+                                println!("Case 1b: {min_key}");
+                                println!("Steal from right sibling: {:?}", right_sibling);
 
-                            let steal_key = right_sibling.keys.remove(0);
-                            self.keys[index] = right_sibling.keys[0];
+                                let steal_key = right_sibling.keys.remove(0);
+                                self.keys[index] = right_sibling.keys[0];
 
-                            if right_sibling.is_leaf {
-                                let steal_value = right_sibling.values.remove(0);
-                                self.childrens[index].values.push(steal_value);
+                                if right_sibling.is_leaf {
+                                    let steal_value = right_sibling.values.remove(0);
+                                    self.childrens[index].values.push(steal_value);
+                                }
+
+                                // Due to borrow checker, this have to be placed here instead
+                                // of on top.
+                                self.childrens[index].keys.push(steal_key);
                             }
-
-                            // Due to borrow checker, this have to be placed here instead
-                            // of on top.
-                            self.childrens[index].keys.push(steal_key);
                         }
                     }
 
                     result
                 }
             }
+        };
+
+        if !self.is_leaf && !self.keys.is_empty() {
+            let mut right_index = match self.keys.binary_search(key) {
+                Ok(index) => index,
+                Err(index) => index,
+            };
+
+            let left_index = if right_index == self.childrens.len() - 1 {
+                right_index - 1
+            } else {
+                right_index = right_index + 1;
+                right_index - 1
+            };
+
+            if !self.childrens[right_index].is_leaf {
+                if self.childrens[right_index].keys.is_empty()
+                    || self.childrens[left_index].keys.is_empty()
+                {
+                    println!("Case 3 Root: {left_index}, {right_index}");
+                    let mut left = self.childrens.remove(left_index);
+                    let mut right = self.childrens.remove(left_index);
+                    left.childrens.append(&mut right.childrens);
+                    left.keys.append(&mut self.keys);
+                    left.keys.append(&mut right.keys);
+
+                    self.childrens.push(left);
+                };
+            }
         }
+
+        result
     }
 }
 
@@ -322,10 +359,17 @@ impl BPlusTree {
     }
 
     pub fn remove(&mut self, key: &u32) -> Option<u32> {
-        self.root.as_mut().map_or(None, |node| {
+        if let Some(node) = self.root.as_mut() {
             let result = node.remove(key, self.max_degree);
+
+            if node.keys.is_empty() {
+                self.root = Some(node.childrens.pop().unwrap())
+            }
+
             result
-        })
+        } else {
+            None
+        }
     }
 
     pub fn get(&self, key: &u32) -> Option<&u32> {
