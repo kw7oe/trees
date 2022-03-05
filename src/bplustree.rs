@@ -249,6 +249,7 @@ impl Node {
                 } else {
                     let result = self.childrens[index].remove(key, max_degree);
                     let min_key = self.min_key(max_degree);
+                    println!("case 1b: {:?}", self.childrens);
 
                     // Plus one since we deleted, but we want to check the number of keys
                     // before we delete.
@@ -258,6 +259,7 @@ impl Node {
                             let right_sibling = self.childrens.get_mut(sibling_index).unwrap();
 
                             if right_sibling.keys.len() > 1 {
+                                println!("Case 1b: {min_key}");
                                 println!("Case 1b: {min_key}");
                                 println!("Steal from right sibling: {:?}", right_sibling);
 
@@ -297,10 +299,13 @@ impl Node {
                 left_index -= 1
             }
 
-            if !self.childrens[right_index].is_leaf {
-                if self.childrens[right_index].keys.is_empty()
-                    || self.childrens[left_index].keys.is_empty()
-                {
+            println!("right_index: {right_index}, left_index: {left_index}");
+            println!("check if chidlren is empty: {:?}", self.childrens);
+
+            if self.childrens[right_index].keys.is_empty()
+                || self.childrens[left_index].keys.is_empty()
+            {
+                if !self.childrens[right_index].is_leaf {
                     println!("Case 3 Root: {left_index}, {right_index}");
                     let mut left = self.childrens.remove(left_index);
                     let mut right = self.childrens.remove(left_index);
@@ -309,7 +314,18 @@ impl Node {
                     left.keys.append(&mut right.keys);
 
                     self.childrens.push(left);
-                };
+                } else {
+                    println!("merge node");
+                    let index_to_remove = if self.childrens[left_index].keys.is_empty() {
+                        self.keys.remove(left_index);
+                        left_index
+                    } else {
+                        self.keys.remove(right_index);
+                        right_index
+                    };
+
+                    self.childrens.remove(index_to_remove);
+                }
             }
         }
 
@@ -629,13 +645,25 @@ mod test {
     }
 
     #[test]
-    fn delete_key() {
-        let vec: Vec<u32> = (1..20).collect();
+    fn delete_keys() {
+        let mut vec: Vec<u32> = (1..20).collect();
         let mut tree = BPlusTree::new(vec.clone(), 4);
+        tree.print();
+        tree.remove(&1);
+        tree.remove(&2);
 
-        for v in vec {
-            tree.print();
-            assert_eq!(tree.remove(&v), Some(v));
+        tree.print();
+        tree.remove(&3);
+        tree.print();
+
+        vec.retain(|&x| x != 1 && x != 2 && x != 3);
+        for v in &vec {
+            assert_eq!(tree.get(v), Some(v));
         }
+
+        // for v in vec {
+        //     tree.print();
+        //     assert_eq!(tree.remove(&v), Some(v));
+        // }
     }
 }
