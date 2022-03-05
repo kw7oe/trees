@@ -133,7 +133,7 @@ impl Node {
     }
 
     pub fn remove(&mut self, key: &u32, max_degree: usize) -> Option<u32> {
-        println!("Removing {key} from {:?}", self);
+        println!("--- remove {key} from {:?}", self);
         let result = match self.keys.binary_search(key) {
             Ok(index) => {
                 if self.is_leaf {
@@ -160,8 +160,8 @@ impl Node {
     }
 
     pub fn remove_from_internals(&mut self, index: usize, max_degree: usize) -> Option<u32> {
+        println!("--- remove_from_internals");
         let key = self.keys[index];
-
         self.keys.remove(index);
 
         println!(
@@ -197,6 +197,7 @@ impl Node {
     }
 
     pub fn fill_with_immediate_sibling(&mut self, index: usize, max_degree: usize) {
+        println!("--- fill_with_immediate_sibling");
         let min_key = self.min_key(max_degree);
 
         if self.childrens[index].keys.len() > min_key {
@@ -222,6 +223,8 @@ impl Node {
     }
 
     pub fn fill_with_inorder_successor(&mut self, index: usize) {
+        println!("--- fill_with_inorder_successor");
+
         let node = &self.childrens[index + 1];
         let mut indexes = vec![];
         for (i, n) in node.childrens.iter().enumerate() {
@@ -257,6 +260,8 @@ impl Node {
     }
 
     pub fn rebalance_after_remove_from_leaf_node(&mut self, index: usize, max_degree: usize) {
+        println!("--- rebalance_after_remove_from_leaf_node");
+        println!("self: {:?}, child: {:?}", self, self.childrens);
         let min_key = self.min_key(max_degree);
 
         // Plus one since we deleted, but we want to check the number of keys
@@ -289,114 +294,129 @@ impl Node {
                 }
             }
         }
+        println!("");
+    }
+
+    pub fn find_indexes_invovled(&self, key: &u32) -> (usize, usize, usize) {
+        let index = match self.keys.binary_search(key) {
+            Ok(index) => index,
+            Err(index) => index,
+        };
+
+        let mut left_index = index;
+        let mut right_index = index;
+        if index == 0 {
+            right_index += 1;
+        }
+
+        if index == self.childrens.len() - 1 {
+            left_index -= 1;
+        }
+
+        let empty_index = if self.childrens[left_index].keys.is_empty() {
+            left_index
+        } else {
+            right_index
+        };
+
+        (left_index, right_index, empty_index)
     }
 
     pub fn rebalance(&mut self, key: &u32, max_degree: usize) {
-        println!("\n--------------");
-        println!("Rebalancing tree");
-        println!("--------------");
-        println!("self: {:?}, child: {:?}", self, self.childrens);
         if !self.is_leaf && !self.keys.is_empty() {
-            let index = match self.keys.binary_search(key) {
-                Ok(index) => index,
-                Err(index) => index,
-            };
+            println!("--- rebalance");
+            println!("self: {:?}, child: {:?}", self, self.childrens);
 
-            let mut left_index = index;
-            let mut right_index = index;
-            if index == 0 {
-                right_index += 1;
-            }
-
-            if index == self.childrens.len() - 1 {
-                left_index -= 1;
-            }
+            let (left_index, right_index, empty_index) = self.find_indexes_invovled(key);
 
             if self.childrens[right_index].keys.is_empty()
                 || self.childrens[left_index].keys.is_empty()
             {
-                let empty_index = if self.childrens[left_index].keys.is_empty() {
-                    left_index
-                } else {
-                    right_index
-                };
-
                 if !self.childrens[right_index].is_leaf {
-                    println!("Case 3 Root");
-                    let min_key = self.min_key(max_degree);
-
-                    if self.childrens[left_index].keys.len() < min_key
-                        && self.childrens[right_index].keys.len() < min_key
-                    {
-                        if self.keys.len() < min_key {
-                            println!("merge right and left siblings with parents");
-                            let mut left = self.childrens.remove(left_index);
-                            let mut right = self.childrens.remove(left_index);
-                            left.childrens.append(&mut right.childrens);
-                            left.keys.append(&mut self.keys);
-                            left.keys.append(&mut right.keys);
-
-                            self.childrens.push(left);
-                        } else {
-                            println!("merge right and left siblings, remove key from parent");
-                            let parent_key = self.keys.remove(empty_index);
-
-                            let mut left = self.childrens.remove(left_index);
-                            let mut right = self.childrens.remove(left_index);
-
-                            println!("{:?}, {:?}", left, right);
-
-                            left.keys.push(parent_key);
-                            left.keys.append(&mut right.keys);
-                            left.childrens.append(&mut right.childrens);
-
-                            self.childrens.insert(left_index, left);
-                        }
-                    } else if self.childrens[left_index].keys.len() < min_key {
-                        println!("Steal from parent to merge with right siblings...");
-                        let parent_key = self.keys.remove(left_index);
-
-                        let mut left = self.childrens.remove(left_index);
-                        // - 1 because we remove left above.
-                        let right = &mut self.childrens[right_index - 1];
-
-                        // Combine childrens of right and left.
-                        left.childrens.append(&mut right.childrens);
-                        right.childrens = left.childrens;
-
-                        // Steal key from parent.
-                        right.keys.insert(0, parent_key);
-                    } else if self.childrens[right_index].keys.len() < min_key {
-                        // Parent steal from left child. Right child steal key and child
-                        // from left child.
-                        let parent_key = self.keys.remove(right_index - 1);
-                        println!("Right child steal {parent_key} from parent...");
-                        let right = &mut self.childrens[right_index];
-                        right.keys.push(parent_key);
-
-                        let left = &mut self.childrens[left_index];
-                        let steal_key = left.keys.pop().unwrap();
-                        println!("Parent steal {steal_key} from left_child...");
-                        let steal_child = left.childrens.pop().unwrap();
-                        self.keys.insert(right_index - 1, steal_key);
-
-                        let right = &mut self.childrens[right_index];
-                        right.childrens.insert(0, steal_child);
-                    }
+                    self.rebalance_internal_node(right_index, left_index, empty_index, max_degree);
                 } else {
                     println!("Remove empty child");
 
                     println!("keys: {:?}", self.keys);
-                    if self.keys.len() > 1 {
-                        self.keys.remove(empty_index);
-                    }
+                    // if self.keys.len() > 1 {
+                    self.keys.remove(empty_index);
+                    // }
 
                     self.childrens.remove(empty_index);
                 }
             }
+            println!("-----\n");
         }
+    }
 
-        println!("--------------\n");
+    pub fn rebalance_internal_node(
+        &mut self,
+        right_index: usize,
+        left_index: usize,
+        empty_index: usize,
+        max_degree: usize,
+    ) {
+        println!("Case 3 Root");
+        let min_key = self.min_key(max_degree);
+
+        if self.childrens[left_index].keys.len() < min_key
+            && self.childrens[right_index].keys.len() < min_key
+        {
+            if self.keys.len() < min_key {
+                println!("merge right and left siblings with parents");
+                let mut left = self.childrens.remove(left_index);
+                let mut right = self.childrens.remove(left_index);
+                left.childrens.append(&mut right.childrens);
+                left.keys.append(&mut self.keys);
+                left.keys.append(&mut right.keys);
+
+                self.childrens.push(left);
+            } else {
+                println!("merge right and left siblings, remove key from parent");
+                let parent_key = self.keys.remove(empty_index);
+
+                let mut left = self.childrens.remove(left_index);
+                let mut right = self.childrens.remove(left_index);
+
+                println!("{:?}, {:?}", left, right);
+
+                left.keys.push(parent_key);
+                left.keys.append(&mut right.keys);
+                left.childrens.append(&mut right.childrens);
+
+                self.childrens.insert(left_index, left);
+            }
+        } else if self.childrens[left_index].keys.len() < min_key {
+            println!("Steal from parent to merge with right siblings...");
+            let parent_key = self.keys.remove(left_index);
+
+            let mut left = self.childrens.remove(left_index);
+            // - 1 because we remove left above.
+            let right = &mut self.childrens[right_index - 1];
+
+            // Combine childrens of right and left.
+            left.childrens.append(&mut right.childrens);
+            right.childrens = left.childrens;
+
+            // Steal key from parent.
+            right.keys.insert(0, parent_key);
+        } else if self.childrens[right_index].keys.len() < min_key {
+            // Parent steal from left child. Right child steal key and child
+            // from left child.
+            let parent_key = self.keys.remove(right_index - 1);
+            println!("Right child steal {parent_key} from parent...");
+            let right = &mut self.childrens[right_index];
+            right.keys.push(parent_key);
+
+            let left = &mut self.childrens[left_index];
+            let steal_key = left.keys.pop().unwrap();
+            println!("Parent steal {steal_key} from left_child...");
+            let steal_child = left.childrens.pop().unwrap();
+            self.keys.insert(right_index - 1, steal_key);
+
+            let right = &mut self.childrens[right_index];
+            right.childrens.insert(0, steal_child);
+        }
     }
 }
 
