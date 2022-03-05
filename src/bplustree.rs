@@ -147,7 +147,7 @@ impl Node {
         if child_key == min_key {
             if self.childrens[index + 1].is_leaf {
                 println!("Case 2b: {:?}", self.childrens[index + 1]);
-                self.fill_with_immediate_sibling(index);
+                self.fill_with_immediate_sibling(index, max_degree);
             }
         } else {
             println!("Case 2a: {:?}", self.childrens[index + 1]);
@@ -168,17 +168,25 @@ impl Node {
         result
     }
 
-    pub fn fill_with_immediate_sibling(&mut self, index: usize) {
-        // Case 2b
-        let left_sibling = self.childrens.get_mut(index).unwrap();
+    pub fn fill_with_immediate_sibling(&mut self, index: usize, max_degree: usize) {
+        let min_key = self.min_key(max_degree);
 
-        if left_sibling.keys.len() > 1 {
+        if self.childrens[index].keys.len() > min_key {
+            let left_sibling = self.childrens.get_mut(index).unwrap();
             let steal_key = left_sibling.keys.pop().unwrap();
             let steal_value = left_sibling.values.pop().unwrap();
             println!("Steal {steal_key} from left sibling {:?}...", left_sibling);
             self.keys.insert(index, steal_key);
             self.childrens[index + 1].keys.insert(0, steal_key);
             self.childrens[index + 1].values.insert(0, steal_value);
+        } else if self.childrens[index + 1].keys.len() > min_key {
+            let right_sibling = self.childrens.get_mut(index + 1).unwrap();
+            let steal_key = right_sibling.keys.pop().unwrap();
+            // let steal_value = right_sibling.values.pop().unwrap();
+            println!(
+                "----------- Steal {steal_key} from left sibling {:?}...",
+                right_sibling
+            );
         } else {
             println!("Case 3 internal");
             self.childrens.remove(index + 1);
@@ -255,11 +263,6 @@ impl Node {
                     if self.childrens[index].keys.len() + 1 == min_key {
                         let sibling_index = index + 1;
                         if self.childrens.len() > sibling_index {
-                            println!("------");
-                            println!("self: {:?}", self);
-                            println!("childrens: {:?}", self.childrens);
-                            println!("------");
-
                             let right_sibling = self.childrens.get_mut(sibling_index).unwrap();
 
                             if right_sibling.keys.len() > 1 {
@@ -285,11 +288,6 @@ impl Node {
                                 // Due to borrow checker, this have to be placed here instead
                                 // of on top.
                                 self.childrens[index].keys.push(parent_key);
-
-                                println!("------\nAfter\n------");
-                                println!("self: {:?}", self);
-                                println!("childrens: {:?}", self.childrens);
-                                println!("------");
                             }
                         }
                     }
@@ -315,11 +313,17 @@ impl Node {
                 left_index -= 1
             }
 
+            println!("Index: {left_index}, {right_index}");
+            println!("-----");
+            println!("self: {:?}", self);
+            println!("children: {:?}", self.childrens);
+            println!("-----");
+
             if self.childrens[right_index].keys.is_empty()
                 || self.childrens[left_index].keys.is_empty()
             {
                 if !self.childrens[right_index].is_leaf {
-                    println!("Case 3 Root: {left_index}, {right_index}");
+                    println!("Case 3 Root");
                     let min_key = self.min_key(max_degree);
 
                     if self.childrens[left_index].keys.len() < min_key
@@ -346,6 +350,22 @@ impl Node {
 
                         // Steal key from parent.
                         right.keys.insert(0, parent_key);
+                    } else if self.childrens[right_index].keys.len() < min_key {
+                        // Parent steal from left child. Right child steal key and child
+                        // from left child.
+                        let parent_key = self.keys.remove(right_index - 1);
+                        println!("Right child steal {parent_key} from parent...");
+                        let right = &mut self.childrens[right_index];
+                        right.keys.push(parent_key);
+
+                        let left = &mut self.childrens[left_index];
+                        let steal_key = left.keys.pop().unwrap();
+                        println!("Parent steal {steal_key} from left_child...");
+                        let steal_child = left.childrens.pop().unwrap();
+                        self.keys.insert(right_index - 1, steal_key);
+
+                        let right = &mut self.childrens[right_index];
+                        right.childrens.insert(0, steal_child);
                     }
                 } else {
                     let index_to_remove = if self.childrens[left_index].keys.is_empty() {
@@ -793,14 +813,72 @@ mod test {
         let mut vec: Vec<u32> = (1..200).collect();
         let mut tree = BPlusTree::new(vec.clone(), 3);
 
-        vec.retain(|&x| x != 19);
+        vec.retain(|&x| x != 199);
         for &v in &vec {
             assert_eq!(tree.remove(&v), Some(v));
         }
 
         tree.print();
-        assert_eq!(tree.remove(&19), Some(19));
-        assert_eq!(tree.get(&19), None);
+        assert_eq!(tree.remove(&199), Some(199));
+        assert_eq!(tree.get(&199), None);
+
+        for v in &vec {
+            assert_eq!(tree.get(v), None);
+        }
+    }
+
+    #[test]
+    fn delete_keys_on_leaf_node_that_need_to_steal_from_both_sibling_and_parent() {
+        // Delete 14 from:
+        // [7, 13]
+        // [3, 5]  [9, 11]  [14]
+        // [1, 2]  [3, 4]  [5, 6]  [7, 8]  [9, 10]  [11, 12]  [13]  [14]
+        //
+        // become:
+        // [7, 13]
+        // [3, 5]  [9, 11]  []
+        // [1, 2]  [3, 4]  [5, 6]  [7, 8]  [9, 10]  [11, 12]  [13]  []
+        //
+        // since, parent and sibling have enough keys, right sibling steal key from parent.
+        // Parent will then steal key from the siblings. Since left sibling has child,
+        // right sibling will need to steal the child from left sibling.
+        //
+        // [7, 11]
+        // [3, 5]  [9]  [13]
+        // [1, 2]  [3, 4]  [5, 6]  [7, 8]  [9, 10]  [11, 12]  [13]
+        let mut vec: Vec<u32> = (1..20).collect();
+        let mut tree = BPlusTree::new(vec.clone(), 4);
+        tree.remove(&19);
+        tree.remove(&18);
+        tree.remove(&17);
+        tree.remove(&16);
+        tree.remove(&15);
+
+        tree.print();
+        assert_eq!(tree.remove(&14), Some(14));
+        assert_eq!(tree.get(&14), None);
+        tree.print();
+
+        vec.retain(|x| ![19, 18, 17, 16, 15, 14].contains(x));
+        for v in &vec {
+            assert_eq!(tree.get(v), Some(v));
+        }
+    }
+
+    #[test]
+    fn delete_all_keys_from_right_to_left() {
+        let mut vec: Vec<u32> = (1..20).collect();
+        let mut tree = BPlusTree::new(vec.clone(), 4);
+
+        vec.retain(|&x| x != 1);
+        for &v in vec.iter().rev() {
+            tree.print();
+            assert_eq!(tree.remove(&v), Some(v));
+        }
+
+        tree.print();
+        assert_eq!(tree.remove(&1), Some(1));
+        assert_eq!(tree.get(&1), None);
 
         for v in &vec {
             assert_eq!(tree.get(v), None);
