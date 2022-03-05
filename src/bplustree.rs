@@ -414,7 +414,7 @@ impl BPlusTree {
             let result = node.remove(key, self.max_degree);
 
             if node.keys.is_empty() {
-                self.root = Some(node.childrens.pop().unwrap())
+                self.root = node.childrens.pop()
             }
 
             result
@@ -785,6 +785,25 @@ mod test {
         vec.retain(|x| ![1, 2, 3, 4, 5, 6, 7].contains(x));
         for v in &vec {
             assert_eq!(tree.get(v), Some(v));
+        }
+    }
+
+    #[test]
+    fn delete_all_keys_from_left_to_right() {
+        let mut vec: Vec<u32> = (1..200).collect();
+        let mut tree = BPlusTree::new(vec.clone(), 3);
+
+        vec.retain(|&x| x != 19);
+        for &v in &vec {
+            assert_eq!(tree.remove(&v), Some(v));
+        }
+
+        tree.print();
+        assert_eq!(tree.remove(&19), Some(19));
+        assert_eq!(tree.get(&19), None);
+
+        for v in &vec {
+            assert_eq!(tree.get(v), None);
         }
     }
 }
