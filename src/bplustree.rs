@@ -249,31 +249,47 @@ impl Node {
                 } else {
                     let result = self.childrens[index].remove(key, max_degree);
                     let min_key = self.min_key(max_degree);
-                    println!("case 1b: {:?}", self.childrens);
 
                     // Plus one since we deleted, but we want to check the number of keys
                     // before we delete.
                     if self.childrens[index].keys.len() + 1 == min_key {
                         let sibling_index = index + 1;
                         if self.childrens.len() > sibling_index {
+                            println!("------");
+                            println!("self: {:?}", self);
+                            println!("childrens: {:?}", self.childrens);
+                            println!("------");
+
                             let right_sibling = self.childrens.get_mut(sibling_index).unwrap();
 
                             if right_sibling.keys.len() > 1 {
-                                println!("Case 1b: {min_key}");
-                                println!("Case 1b: {min_key}");
-                                println!("Steal from right sibling: {:?}", right_sibling);
-
+                                let parent_key = self.keys[index];
                                 let steal_key = right_sibling.keys.remove(0);
-                                self.keys[index] = right_sibling.keys[0];
+
+                                println!("Case 1b: {min_key}");
+                                println!(
+                                    "Steal {steal_key} from right sibling: {:?}",
+                                    right_sibling
+                                );
 
                                 if right_sibling.is_leaf {
+                                    self.keys[index] = right_sibling.keys[0];
                                     let steal_value = right_sibling.values.remove(0);
                                     self.childrens[index].values.push(steal_value);
+                                } else {
+                                    self.keys[index] = steal_key;
+                                    let steal_child = right_sibling.childrens.remove(0);
+                                    self.childrens[index].childrens.push(steal_child);
                                 }
 
                                 // Due to borrow checker, this have to be placed here instead
                                 // of on top.
-                                self.childrens[index].keys.push(steal_key);
+                                self.childrens[index].keys.push(parent_key);
+
+                                println!("------\nAfter\n------");
+                                println!("self: {:?}", self);
+                                println!("childrens: {:?}", self.childrens);
+                                println!("------");
                             }
                         }
                     }
@@ -299,9 +315,6 @@ impl Node {
                 left_index -= 1
             }
 
-            println!("right_index: {right_index}, left_index: {left_index}");
-            println!("check if chidlren is empty: {:?}", self.childrens);
-
             if self.childrens[right_index].keys.is_empty()
                 || self.childrens[left_index].keys.is_empty()
             {
@@ -315,7 +328,6 @@ impl Node {
 
                     self.childrens.push(left);
                 } else {
-                    println!("merge node");
                     let index_to_remove = if self.childrens[left_index].keys.is_empty() {
                         self.keys.remove(left_index);
                         left_index
@@ -645,7 +657,22 @@ mod test {
     }
 
     #[test]
-    fn delete_keys() {
+    fn delete_key_at_leaf_node_that_require_merge_and_delete_from_internal() {
+        // Delete 3 from:
+        // [7, 13]
+        // [4, 5]  [9, 11]  [15, 17]
+        // [3]  [4]  [5, 6]  [7, 8]  [9, 10]  [11, 12]  [13, 14]  [15, 16]  [17, 18, 19]
+        //
+        // Become:
+        // [7, 13]
+        // [4, 5]  [9, 11]  [15, 17]
+        // []  [4]  [5, 6]  [7, 8]  [9, 10]  [11, 12]  [13, 14]  [15, 16]  [17, 18, 19]
+        //
+        // Hence, we need to merge node [] and [4], with that our parent has one less child,
+        // and hence we need to remove 4 from the parent keys.
+        // [7, 13]
+        // [5]  [9, 11]  [15, 17]
+        // [4]  [5, 6]  [7, 8]  [9, 10]  [11, 12]  [13, 14]  [15, 16]  [17, 18, 19]
         let mut vec: Vec<u32> = (1..20).collect();
         let mut tree = BPlusTree::new(vec.clone(), 4);
         tree.print();
@@ -660,10 +687,46 @@ mod test {
         for v in &vec {
             assert_eq!(tree.get(v), Some(v));
         }
+    }
 
-        // for v in vec {
-        //     tree.print();
-        //     assert_eq!(tree.remove(&v), Some(v));
-        // }
+    #[test]
+    fn delete_key_at_leaf_node_that_require_to_get_key_from_parent_and_steal_sibling_child() {
+        // Delete 5 from:
+        // [7, 13]
+        // [6]  [9, 11]  [15, 17]
+        // [5]  [6]  [7, 8]  [9, 10]  [11, 12]  [13, 14]  [15, 16]  [17, 18, 19]
+        //
+        // Become:
+        // [7, 13]
+        // [6]  [9, 11]  [15, 17]
+        // []  [6]  [7, 8]  [9, 10]  [11, 12]  [13, 14]  [15, 16]  [17, 18, 19]
+        //
+        // Hence, we need to merge [], [6], by getting from parent and parent steal from
+        // right sibling, since now our right sibling have less key, we also need to
+        // steal their child:
+        // [7, 13]
+        // [6]  [9, 11]  [15, 17]
+        // []  [6]  [7, 8]  [9, 10]  [11, 12]  [13, 14]  [15, 16]  [17, 18, 19]
+        //
+        // and after merge:
+        // [9, 13]
+        // [7]  [11]  [15, 17]
+        // [6]  [7, 8]  [9, 10]  [11, 12]  [13, 14]  [15, 16]  [17, 18, 19]
+        let mut vec: Vec<u32> = (1..20).collect();
+        let mut tree = BPlusTree::new(vec.clone(), 4);
+        tree.print();
+        tree.remove(&1);
+        tree.remove(&2);
+        tree.remove(&3);
+        tree.remove(&4);
+
+        tree.print();
+        tree.remove(&5);
+        tree.print();
+
+        vec.retain(|x| ![1, 2, 3, 4, 5].contains(x));
+        for v in &vec {
+            assert_eq!(tree.get(v), Some(v));
+        }
     }
 }
