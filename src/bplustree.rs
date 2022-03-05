@@ -320,13 +320,33 @@ impl Node {
             {
                 if !self.childrens[right_index].is_leaf {
                     println!("Case 3 Root: {left_index}, {right_index}");
-                    let mut left = self.childrens.remove(left_index);
-                    let mut right = self.childrens.remove(left_index);
-                    left.childrens.append(&mut right.childrens);
-                    left.keys.append(&mut self.keys);
-                    left.keys.append(&mut right.keys);
+                    let min_key = self.min_key(max_degree);
 
-                    self.childrens.push(left);
+                    if self.childrens[left_index].keys.len() < min_key
+                        && self.childrens[right_index].keys.len() < min_key
+                    {
+                        let mut left = self.childrens.remove(left_index);
+                        let mut right = self.childrens.remove(left_index);
+                        left.childrens.append(&mut right.childrens);
+                        left.keys.append(&mut self.keys);
+                        left.keys.append(&mut right.keys);
+
+                        self.childrens.push(left);
+                    } else if self.childrens[left_index].keys.len() < min_key {
+                        println!("Steal from parent to merge with right siblings...");
+                        let parent_key = self.keys.remove(left_index);
+
+                        let mut left = self.childrens.remove(left_index);
+                        // - 1 because we remove left above.
+                        let right = &mut self.childrens[right_index - 1];
+
+                        // Combine childrens of right and left.
+                        left.childrens.append(&mut right.childrens);
+                        right.childrens = left.childrens;
+
+                        // Steal key from parent.
+                        right.keys.insert(0, parent_key);
+                    }
                 } else {
                     let index_to_remove = if self.childrens[left_index].keys.is_empty() {
                         self.keys.remove(left_index);
@@ -725,6 +745,44 @@ mod test {
         tree.print();
 
         vec.retain(|x| ![1, 2, 3, 4, 5].contains(x));
+        for v in &vec {
+            assert_eq!(tree.get(v), Some(v));
+        }
+    }
+
+    #[test]
+    fn delete_key_at_leaf_node_that_require_get_key_from_parent_to_combine_with_sibling_child() {
+        // Remove 7 from:
+        // [9, 13]
+        // [8]  [11]  [15, 17]
+        // [7]  [8]  [9, 10]  [11, 12]  [13, 14]  [15, 16]  [17, 18, 19]
+        //
+        // Become:
+        // [9, 13]
+        // [8]  [11]  [15, 17]
+        // []  [8]  [9, 10]  [11, 12]  [13, 14]  [15, 16]  [17, 18, 19]
+        //
+        // Since, we can't steal from right siblings as it only have one key,
+        // we steal from our parent. This mean that parent will have one less child as
+        // welll as we need to merge our left and right siblings:
+        // [13]
+        // [9, 11]  [15, 17]
+        // [8]  [9, 10]  [11, 12]  [13, 14]  [15, 16]  [17, 18, 19]
+        let mut vec: Vec<u32> = (1..20).collect();
+        let mut tree = BPlusTree::new(vec.clone(), 4);
+        tree.print();
+        tree.remove(&1);
+        tree.remove(&2);
+        tree.remove(&3);
+        tree.remove(&4);
+        tree.remove(&5);
+        tree.remove(&6);
+
+        tree.print();
+        tree.remove(&7);
+        tree.print();
+
+        vec.retain(|x| ![1, 2, 3, 4, 5, 6, 7].contains(x));
         for v in &vec {
             assert_eq!(tree.get(v), Some(v));
         }
