@@ -371,6 +371,38 @@ impl Node {
                 left.keys.append(&mut right.keys);
 
                 self.childrens.push(left);
+            } else if index != left_index && self.childrens[left_index].keys.len() > min_key {
+                // Parent steal from left child. Right child steal key and child
+                // from left child.
+                let parent_key = self.keys.remove(left_index);
+                println!("Right child steal {parent_key} from parent...");
+                let right = &mut self.childrens[index];
+                right.keys.push(parent_key);
+
+                let left = &mut self.childrens[left_index];
+                let steal_key = left.keys.pop().unwrap();
+                println!("Parent steal {steal_key} from left_child...");
+                let steal_child = left.childrens.pop().unwrap();
+                self.keys.insert(left_index, steal_key);
+
+                let right = &mut self.childrens[index];
+                right.childrens.insert(0, steal_child);
+            } else if index != right_index && self.childrens[right_index].keys.len() > min_key {
+                // Parent steal from right child. Left child steal key and child
+                // from right child.
+                let parent_key = self.keys.remove(index);
+                println!("Left child steal {parent_key} from parent...");
+                let left = &mut self.childrens[index];
+                left.keys.push(parent_key);
+
+                let right = &mut self.childrens[right_index];
+                let steal_key = right.keys.remove(0);
+                println!("Parent steal {steal_key} from right child...");
+                let steal_child = right.childrens.remove(0);
+                self.keys.insert(index, steal_key);
+
+                let left = &mut self.childrens[index];
+                left.childrens.push(steal_child);
             } else {
                 println!("merge right and left siblings, remove key from parent");
 
@@ -1001,9 +1033,9 @@ mod test {
         assert_eq!(tree.get(&9), None);
         tree.print();
 
-        // for v in &to_deletes {
-        //     assert_eq!(tree.remove(v), Some(*v));
-        // }
+        for v in &to_deletes {
+            assert_eq!(tree.remove(v), Some(*v));
+        }
 
         vec.retain(|x| !deletes.contains(x) && !to_deletes.contains(x));
         for v in &vec {
