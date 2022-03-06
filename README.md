@@ -8,7 +8,8 @@ Currently implemented:
 
 - Binary Search Tree
 - B Tree
-  - based on Introduction to Algorithms, B Tree chapter
+  - based on Introduction to Algorithms, B Tree chapter and [Programiz B
+    Tree](https://www.programiz.com/dsa/b-tree) for deletion.
 - B+ Tree
   - based on [Programiz B+ Tree](https://www.programiz.com/dsa/b-plus-tree)
     and [B+ Tree Visualization](https://www.cs.usfca.edu/~galles/visualization/BPlusTree.html)
