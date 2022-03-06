@@ -273,49 +273,6 @@ impl Node {
         }
     }
 
-    pub fn rebalance_after_remove_from_leaf_node(&mut self, index: usize, max_degree: usize) {
-        let min_key = self.min_key(max_degree);
-        if DEBUG {
-            println!("--- rebalance_after_remove_from_leaf_node");
-            println!(
-                "index: {index}, self: {:?}, child: {:?}",
-                self, self.childrens
-            );
-        }
-
-        if self.childrens[index].keys.len() < min_key {
-            let sibling_index = index + 1;
-            if self.childrens.len() > sibling_index {
-                let right_sibling = self.childrens.get_mut(sibling_index).unwrap();
-
-                if right_sibling.keys.len() > 1 {
-                    let parent_key = self.keys[index];
-                    let steal_key = right_sibling.keys.remove(0);
-
-                    println!("Case 1b: {min_key}");
-                    println!("Steal {steal_key} from right sibling: {:?}", right_sibling);
-
-                    if right_sibling.is_leaf {
-                        self.keys[index] = right_sibling.keys[0];
-                        let steal_value = right_sibling.values.remove(0);
-                        self.childrens[index].values.push(steal_value);
-                    } else {
-                        self.keys[index] = steal_key;
-                        let steal_child = right_sibling.childrens.remove(0);
-                        self.childrens[index].childrens.push(steal_child);
-                    }
-
-                    // Due to borrow checker, this have to be placed here instead
-                    // of on top.
-                    self.childrens[index].keys.push(parent_key);
-                }
-            }
-        }
-        if DEBUG {
-            println!("");
-        }
-    }
-
     pub fn find_indexes_involved(&self, mut index: usize) -> (usize, usize, usize) {
         println!("keys: {:?}", self.keys);
         println!("index: {index}, child_key: {}", self.childrens.len());
