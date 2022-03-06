@@ -14,3 +14,5 @@ Currently implemented:
   - based on [Programiz B+ Tree](https://www.programiz.com/dsa/b-plus-tree)
     and [B+ Tree Visualization](https://www.cs.usfca.edu/~galles/visualization/BPlusTree.html)
   - currently does not implement pointers in leaf node
+  - current implementation for delete and rebalancing is messy. It definitely
+    requires clean up to make the logic simpler.
