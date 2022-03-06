@@ -150,7 +150,7 @@ impl Node {
                     None
                 } else {
                     let result = self.childrens[index].remove(key, max_degree);
-                    self.rebalance_after_remove_from_leaf_node(index, max_degree);
+                    // self.rebalance_after_remove_from_leaf_node(index, max_degree);
                     result
                 }
             }
@@ -1033,6 +1033,36 @@ mod test {
         }
     }
 
+    #[test]
+    fn random_test_case_4() {
+        let mut vec: Vec<u32> = (1..20).collect();
+        let mut tree = BPlusTree::new(vec.clone(), 4);
+        let deletes = vec![11, 10, 12, 18, 7, 16, 14, 19, 2];
+        let to_deletes = vec![1, 5, 13, 8, 4, 15, 6, 3, 17];
+
+        for v in &deletes {
+            assert_eq!(tree.remove(v), Some(*v));
+        }
+
+        tree.print();
+        assert_eq!(tree.remove(&9), Some(9));
+        assert_eq!(tree.get(&9), None);
+        tree.print();
+
+        for v in &to_deletes {
+            assert_eq!(tree.remove(v), Some(*v));
+        }
+
+        vec.retain(|x| !deletes.contains(x) && !to_deletes.contains(x));
+        for v in &vec {
+            assert_eq!(tree.get(v), None);
+        }
+    }
+
+    // Use to generate random test case.
+    //
+    // If a test failed, we would add the test case manually.
+    // as part of our test suite.
     // use rand::seq::SliceRandom;
     // use rand::thread_rng;
     // #[test]
