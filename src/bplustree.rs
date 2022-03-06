@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-const DEBUG: bool = true;
+const DEBUG: bool = false;
 pub struct BPlusTree {
     root: Option<Node>,
     max_degree: usize,
@@ -134,7 +134,7 @@ impl Node {
     }
 
     pub fn remove(&mut self, key: &u32, max_degree: usize) -> Option<u32> {
-        println!("--- remove {key} from {:?}", self);
+        // println!("--- remove {key} from {:?}", self);
         let (index, result) = match self.keys.binary_search(key) {
             Ok(index) => {
                 if self.is_leaf {
@@ -158,7 +158,7 @@ impl Node {
         };
 
         if let Some(index) = index {
-            println!("--- keys: {:?}, index: {index}", self.keys);
+            // println!("--- keys: {:?}, index: {index}", self.keys);
             self.rebalance(index, max_degree);
         }
         result
@@ -183,11 +183,11 @@ impl Node {
 
         if child_key == min_key {
             if self.childrens[index + 1].is_leaf {
-                println!("Case 2b: {:?}", self.childrens[index + 1]);
+                // println!("Case 2b: {:?}", self.childrens[index + 1]);
                 self.fill_with_immediate_sibling(index, max_degree);
             }
         } else {
-            println!("Case 2a: {:?}", self.childrens[index + 1]);
+            // println!("Case 2a: {:?}", self.childrens[index + 1]);
             self.fill_with_inorder_successor(index);
         };
 
@@ -195,7 +195,7 @@ impl Node {
         // children. Hence, we want to pick an inorder successor to
         // replace the key we just removed.
         if self.childrens.len() > index + 1 && !self.childrens[index + 1].is_leaf {
-            println!("Case 2c: {:?}", self.childrens);
+            // println!("Case 2c: {:?}", self.childrens);
 
             if child_key == min_key {
                 self.fill_with_inorder_successor(index);
@@ -215,28 +215,21 @@ impl Node {
             let left_sibling = self.childrens.get_mut(index).unwrap();
             let steal_key = left_sibling.keys.pop().unwrap();
             let steal_value = left_sibling.values.pop().unwrap();
-            println!("Steal {steal_key} from left sibling {:?}...", left_sibling);
+            // println!("Steal {steal_key} from left sibling {:?}...", left_sibling);
             self.keys.insert(index, steal_key);
             self.childrens[index + 1].keys.insert(0, steal_key);
             self.childrens[index + 1].values.insert(0, steal_value);
         } else if self.childrens[index + 1].keys.len() > min_key {
-            let right_sibling = self.childrens.get_mut(index + 1).unwrap();
-            let steal_key = right_sibling.keys.pop().unwrap();
-            // let steal_value = right_sibling.values.pop().unwrap();
-            println!(
-                "----------- Steal {steal_key} from left sibling {:?}...",
-                right_sibling
-            );
             println!("------------------- to handle");
         } else {
-            println!("Case 3 internal");
+            // println!("Case 3 internal");
             self.childrens.remove(index + 1);
         }
     }
 
     pub fn fill_with_inorder_successor(&mut self, index: usize) {
         if DEBUG {
-            println!("--- fill_with_inorder_successor");
+            // println!("--- fill_with_inorder_successor");
         }
 
         let node = &self.childrens[index + 1];
@@ -274,8 +267,10 @@ impl Node {
     }
 
     pub fn find_indexes_involved(&self, mut index: usize) -> (usize, usize, usize) {
-        println!("keys: {:?}", self.keys);
-        println!("index: {index}, child_key: {}", self.childrens.len());
+        if DEBUG {
+            println!("keys: {:?}", self.keys);
+            println!("index: {index}, child_key: {}", self.childrens.len());
+        }
 
         while index >= self.childrens.len() {
             index -= 1;
@@ -319,13 +314,15 @@ impl Node {
                 if !self.childrens[index].is_leaf {
                     self.rebalance_internal_node(index, right_index, left_index, max_degree);
                 } else {
-                    println!("keys: {:?}", self.keys);
-                    println!(
-                        "right keys: {:?}, child_key: {:?}, left keys: {:?}",
-                        self.childrens[right_index].keys,
-                        self.childrens[index].keys,
-                        self.childrens[left_index].keys
-                    );
+                    if DEBUG {
+                        println!("keys: {:?}", self.keys);
+                        println!(
+                            "right keys: {:?}, child_key: {:?}, left keys: {:?}",
+                            self.childrens[right_index].keys,
+                            self.childrens[index].keys,
+                            self.childrens[left_index].keys
+                        );
+                    }
 
                     let min_key = self.min_key(max_degree);
                     if self.childrens[left_index].keys.len() < min_key
@@ -333,7 +330,7 @@ impl Node {
                     {
                         println!("to handle");
                     } else {
-                        println!("Remove empty child");
+                        // println!("Remove empty child");
                         self.keys.remove(index);
                         self.childrens.remove(index);
                     }
@@ -363,7 +360,7 @@ impl Node {
 
         if self.childrens[index].keys.len() <= min_key {
             if self.keys.len() <= min_key {
-                println!("merge right and left siblings with parents");
+                // println!("merge right and left siblings with parents");
                 let mut left = self.childrens.remove(left_index);
                 let mut right = self.childrens.remove(left_index);
                 left.childrens.append(&mut right.childrens);
@@ -375,13 +372,13 @@ impl Node {
                 // Parent steal from left child. Right child steal key and child
                 // from left child.
                 let parent_key = self.keys.remove(left_index);
-                println!("Right child steal {parent_key} from parent...");
+                // println!("Right child steal {parent_key} from parent...");
                 let right = &mut self.childrens[index];
                 right.keys.push(parent_key);
 
                 let left = &mut self.childrens[left_index];
                 let steal_key = left.keys.pop().unwrap();
-                println!("Parent steal {steal_key} from left_child...");
+                // println!("Parent steal {steal_key} from left_child...");
                 let steal_child = left.childrens.pop().unwrap();
                 self.keys.insert(left_index, steal_key);
 
@@ -391,20 +388,20 @@ impl Node {
                 // Parent steal from right child. Left child steal key and child
                 // from right child.
                 let parent_key = self.keys.remove(index);
-                println!("Left child steal {parent_key} from parent...");
+                // println!("Left child steal {parent_key} from parent...");
                 let left = &mut self.childrens[index];
                 left.keys.push(parent_key);
 
                 let right = &mut self.childrens[right_index];
                 let steal_key = right.keys.remove(0);
-                println!("Parent steal {steal_key} from right child...");
+                // println!("Parent steal {steal_key} from right child...");
                 let steal_child = right.childrens.remove(0);
                 self.keys.insert(index, steal_key);
 
                 let left = &mut self.childrens[index];
                 left.childrens.push(steal_child);
             } else {
-                println!("merge right and left siblings, remove key from parent");
+                // println!("merge right and left siblings, remove key from parent");
 
                 let parent_key = if index > 0 {
                     self.keys.remove(index - 1)
@@ -415,7 +412,7 @@ impl Node {
                 let mut left = self.childrens.remove(left_index);
                 let mut right = self.childrens.remove(left_index);
 
-                println!("{:?}, {:?}", left, right);
+                // println!("{:?}, {:?}", left, right);
 
                 left.keys.push(parent_key);
                 left.keys.append(&mut right.keys);
@@ -424,7 +421,7 @@ impl Node {
                 self.childrens.insert(left_index, left);
             }
         } else if self.childrens[left_index].keys.len() <= min_key {
-            println!("Steal from parent to merge with right siblings...");
+            // println!("Steal from parent to merge with right siblings...");
             let parent_key = self.keys.remove(left_index);
 
             let mut left = self.childrens.remove(left_index);
@@ -441,13 +438,13 @@ impl Node {
             // Parent steal from left child. Right child steal key and child
             // from left child.
             let parent_key = self.keys.remove(right_index - 1);
-            println!("Right child steal {parent_key} from parent...");
+            // println!("Right child steal {parent_key} from parent...");
             let right = &mut self.childrens[right_index];
             right.keys.push(parent_key);
 
             let left = &mut self.childrens[left_index];
             let steal_key = left.keys.pop().unwrap();
-            println!("Parent steal {steal_key} from left_child...");
+            // println!("Parent steal {steal_key} from left_child...");
             let steal_child = left.childrens.pop().unwrap();
             self.keys.insert(right_index - 1, steal_key);
 
@@ -784,13 +781,11 @@ mod test {
         // [4]  [5, 6]  [7, 8]  [9, 10]  [11, 12]  [13, 14]  [15, 16]  [17, 18, 19]
         let mut vec: Vec<u32> = (1..20).collect();
         let mut tree = BPlusTree::new(vec.clone(), 4);
-        tree.print();
         tree.remove(&1);
         tree.remove(&2);
 
-        tree.print();
-        tree.remove(&3);
-        tree.print();
+        assert_eq!(tree.remove(&3), Some(3));
+        assert_eq!(tree.get(&3), None);
 
         vec.retain(|&x| x != 1 && x != 2 && x != 3);
         for v in &vec {
@@ -823,15 +818,13 @@ mod test {
         // [6]  [7, 8]  [9, 10]  [11, 12]  [13, 14]  [15, 16]  [17, 18, 19]
         let mut vec: Vec<u32> = (1..20).collect();
         let mut tree = BPlusTree::new(vec.clone(), 4);
-        tree.print();
         tree.remove(&1);
         tree.remove(&2);
         tree.remove(&3);
         tree.remove(&4);
 
-        tree.print();
-        tree.remove(&5);
-        tree.print();
+        assert_eq!(tree.remove(&5), Some(5));
+        assert_eq!(tree.get(&5), None);
 
         vec.retain(|x| ![1, 2, 3, 4, 5].contains(x));
         for v in &vec {
@@ -859,7 +852,6 @@ mod test {
         // [8]  [9, 10]  [11, 12]  [13, 14]  [15, 16]  [17, 18, 19]
         let mut vec: Vec<u32> = (1..20).collect();
         let mut tree = BPlusTree::new(vec.clone(), 4);
-        tree.print();
         tree.remove(&1);
         tree.remove(&2);
         tree.remove(&3);
@@ -867,9 +859,8 @@ mod test {
         tree.remove(&5);
         tree.remove(&6);
 
-        tree.print();
-        tree.remove(&7);
-        tree.print();
+        assert_eq!(tree.remove(&7), Some(7));
+        assert_eq!(tree.get(&7), None);
 
         vec.retain(|x| ![1, 2, 3, 4, 5, 6, 7].contains(x));
         for v in &vec {
@@ -887,7 +878,6 @@ mod test {
             assert_eq!(tree.remove(&v), Some(v));
         }
 
-        tree.print();
         assert_eq!(tree.remove(&199), Some(199));
         assert_eq!(tree.get(&199), None);
 
@@ -923,10 +913,8 @@ mod test {
         tree.remove(&16);
         tree.remove(&15);
 
-        tree.print();
         assert_eq!(tree.remove(&14), Some(14));
         assert_eq!(tree.get(&14), None);
-        tree.print();
 
         vec.retain(|x| ![19, 18, 17, 16, 15, 14].contains(x));
         for v in &vec {
@@ -941,11 +929,9 @@ mod test {
 
         vec.retain(|&x| x != 1);
         for &v in vec.iter().rev() {
-            tree.print();
             assert_eq!(tree.remove(&v), Some(v));
         }
 
-        tree.print();
         assert_eq!(tree.remove(&1), Some(1));
         assert_eq!(tree.get(&1), None);
 
@@ -1028,10 +1014,8 @@ mod test {
             assert_eq!(tree.remove(v), Some(*v));
         }
 
-        tree.print();
         assert_eq!(tree.remove(&9), Some(9));
         assert_eq!(tree.get(&9), None);
-        tree.print();
 
         for v in &to_deletes {
             assert_eq!(tree.remove(v), Some(*v));
@@ -1047,18 +1031,19 @@ mod test {
     //
     // If a test failed, we would add the test case manually.
     // as part of our test suite.
-    // use rand::seq::SliceRandom;
-    // use rand::thread_rng;
-    // #[test]
-    // fn delete_all_keys_randomly() {
-    //     let mut vec: Vec<u32> = (1..20).collect();
-    //     let mut tree = BPlusTree::new(vec.clone(), 4);
-    //     vec.shuffle(&mut thread_rng());
+    use rand::seq::SliceRandom;
+    use rand::thread_rng;
+    #[test]
+    fn delete_all_keys_randomly() {
+        for _i in 0..1000 {
+            let mut vec: Vec<u32> = (1..200).collect();
+            let mut tree = BPlusTree::new(vec.clone(), 4);
+            vec.shuffle(&mut thread_rng());
 
-    //     println!("{:?}", vec);
-    //     for &v in &vec {
-    //         tree.print();
-    //         assert_eq!(tree.remove(&v), Some(v));
-    //     }
-    // }
+            // println!("{i}: {:?}", vec);
+            for &v in &vec {
+                assert_eq!(tree.remove(&v), Some(v));
+            }
+        }
+    }
 }
