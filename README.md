@@ -7,5 +7,9 @@ Lists](https://rust-unofficial.github.io/too-many-lists/index.html).
 Currently implemented:
 
 - Binary Search Tree
-- B Tree _(based on Introduction to Algorithms, B+ Tree chapter)_
-- B+ Tree _(in progress)_
+- B Tree
+  - based on Introduction to Algorithms, B Tree chapter
+- B+ Tree
+  - based on [Programiz B+ Tree](https://www.programiz.com/dsa/b-plus-tree)
+    and [B+ Tree Visualization](https://www.cs.usfca.edu/~galles/visualization/BPlusTree.html)
+  - currently does not implement pointers in leaf node
