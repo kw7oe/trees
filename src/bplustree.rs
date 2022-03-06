@@ -316,16 +316,20 @@ impl Node {
             Err(index) => index,
         };
 
+        println!("index: {index}, child_key: {}", self.childrens.len());
         let mut left_index = index;
         let mut right_index = index;
-        if index == 0 {
-            right_index += 1;
-        }
 
+        // First we need to know if index is the last:
+        //
+        // If it is last, then the index would be a right index,
+        // while left_index would need to -1.
         if index == self.childrens.len() - 1 {
             left_index -= 1;
+        } else {
+            // It means the index is not the last.
+            right_index += 1;
         }
-
         let empty_index = if self.childrens[left_index].keys.is_empty() {
             left_index
         } else {
@@ -344,6 +348,10 @@ impl Node {
 
             let (left_index, right_index, empty_index) = self.find_indexes_invovled(key);
 
+            if DEBUG {
+                println!("left_index: {left_index}, right_index: {right_index}");
+            }
+
             if self.childrens[right_index].keys.is_empty()
                 || self.childrens[left_index].keys.is_empty()
             {
@@ -355,6 +363,7 @@ impl Node {
                         "right keys: {:?}, left keys: {:?}",
                         self.childrens[right_index].keys, self.childrens[left_index].keys
                     );
+
                     let min_key = self.min_key(max_degree);
                     if self.childrens[left_index].keys.len() < min_key
                         && self.childrens[right_index].keys.len() < min_key
@@ -383,10 +392,23 @@ impl Node {
         println!("Case 3 Root");
         let min_key = self.min_key(max_degree);
 
-        if self.childrens[left_index].keys.len() < min_key
-            && self.childrens[right_index].keys.len() < min_key
+        if DEBUG {
+            println!(
+                "min_key: {min_key}, left child num: {}, right child num: {}",
+                self.childrens[left_index].keys.len(),
+                self.childrens[right_index].keys.len(),
+            );
+
+            println!(
+                "parent: {:?}, left child: {:?}, right child: {:?}",
+                self.keys, self.childrens[left_index].keys, self.childrens[right_index].keys,
+            );
+        }
+
+        if self.childrens[left_index].keys.len() <= min_key
+            && self.childrens[right_index].keys.len() <= min_key
         {
-            if self.keys.len() < min_key {
+            if self.keys.len() <= min_key {
                 println!("merge right and left siblings with parents");
                 let mut left = self.childrens.remove(left_index);
                 let mut right = self.childrens.remove(left_index);
@@ -397,7 +419,12 @@ impl Node {
                 self.childrens.push(left);
             } else {
                 println!("merge right and left siblings, remove key from parent");
-                let parent_key = self.keys.remove(empty_index);
+
+                let parent_key = if empty_index < self.keys.len() {
+                    self.keys.remove(empty_index)
+                } else {
+                    self.keys.remove(empty_index - 1)
+                };
 
                 let mut left = self.childrens.remove(left_index);
                 let mut right = self.childrens.remove(left_index);
@@ -410,7 +437,7 @@ impl Node {
 
                 self.childrens.insert(left_index, left);
             }
-        } else if self.childrens[left_index].keys.len() < min_key {
+        } else if self.childrens[left_index].keys.len() <= min_key {
             println!("Steal from parent to merge with right siblings...");
             let parent_key = self.keys.remove(left_index);
 
@@ -424,7 +451,7 @@ impl Node {
 
             // Steal key from parent.
             right.keys.insert(0, parent_key);
-        } else if self.childrens[right_index].keys.len() < min_key {
+        } else if self.childrens[right_index].keys.len() <= min_key {
             // Parent steal from left child. Right child steal key and child
             // from left child.
             let parent_key = self.keys.remove(right_index - 1);
@@ -945,8 +972,7 @@ mod test {
     fn random_test_case_1() {
         let mut vec: Vec<u32> = (1..20).collect();
         let mut tree = BPlusTree::new(vec.clone(), 4);
-        let deletes = vec![18, 16, 15, 13];
-        // , 6, 17, 4, 3, 2, 11, 7, 9, 12];
+        let deletes = vec![18, 16, 15, 13, 6, 17, 4, 3, 2, 11, 7, 9, 12];
 
         for v in &deletes {
             tree.print();
@@ -954,11 +980,16 @@ mod test {
         }
 
         tree.print();
-        // tree.remove(&14);
-        // tree.print();
-        // tree.remove(&19);
+        assert_eq!(tree.remove(&14), Some(14));
+        assert_eq!(tree.get(&14), None);
 
-        vec.retain(|x| !deletes.contains(x));
+        tree.print();
+
+        assert_eq!(tree.remove(&19), Some(19));
+        assert_eq!(tree.get(&19), None);
+        tree.print();
+
+        vec.retain(|x| !deletes.contains(x) && *x != 14 && *x != 19);
         for v in &vec {
             assert_eq!(tree.get(v), Some(v));
         }
