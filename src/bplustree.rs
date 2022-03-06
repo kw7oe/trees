@@ -420,10 +420,10 @@ impl Node {
             } else {
                 println!("merge right and left siblings, remove key from parent");
 
-                let parent_key = if empty_index < self.keys.len() {
-                    self.keys.remove(empty_index)
-                } else {
+                let parent_key = if empty_index > 0 {
                     self.keys.remove(empty_index - 1)
+                } else {
+                    self.keys.remove(empty_index)
                 };
 
                 let mut left = self.childrens.remove(left_index);
@@ -975,19 +975,13 @@ mod test {
         let deletes = vec![18, 16, 15, 13, 6, 17, 4, 3, 2, 11, 7, 9, 12];
 
         for v in &deletes {
-            tree.print();
             assert_eq!(tree.remove(v), Some(*v));
         }
 
-        tree.print();
         assert_eq!(tree.remove(&14), Some(14));
         assert_eq!(tree.get(&14), None);
-
-        tree.print();
-
         assert_eq!(tree.remove(&19), Some(19));
         assert_eq!(tree.get(&19), None);
-        tree.print();
 
         vec.retain(|x| !deletes.contains(x) && *x != 14 && *x != 19);
         for v in &vec {
@@ -995,24 +989,49 @@ mod test {
         }
     }
 
-    // #[test]
-    // fn random_test_case_2() {
-    //     let mut vec: Vec<u32> = (1..20).collect();
-    //     let mut tree = BPlusTree::new(vec.clone(), 4);
-    //     let deletes = vec![
-    //         16, 11, 12, 6, 17, 4, 15, 18, 13, 3, 14, 10, 2, 9, 19, 1, 5, 7, 8,
-    //     ];
+    #[test]
+    fn random_test_case_2() {
+        let mut vec: Vec<u32> = (1..20).collect();
+        let mut tree = BPlusTree::new(vec.clone(), 4);
+        let deletes = vec![
+            16, 11, 12, 6, 17, 4, 15, 18, 13, 3, 14, 10, 2, 9, 19, 1, 5, 7, 8,
+        ];
 
-    //     for v in &deletes {
-    //         tree.print();
-    //         assert_eq!(tree.remove(v), Some(*v));
-    //     }
+        for v in &deletes {
+            assert_eq!(tree.remove(v), Some(*v));
+        }
 
-    //     vec.retain(|x| !deletes.contains(x));
-    //     for v in &vec {
-    //         assert_eq!(tree.get(v), None);
-    //     }
-    // }
+        vec.retain(|x| !deletes.contains(x));
+        for v in &vec {
+            assert_eq!(tree.get(v), None);
+        }
+    }
+
+    #[test]
+    fn random_test_case_3() {
+        let mut vec: Vec<u32> = (1..20).collect();
+        let mut tree = BPlusTree::new(vec.clone(), 4);
+        let deletes = vec![1, 5, 19, 18, 6, 3, 2, 10, 8, 12, 14, 17, 13];
+        let to_deletes = vec![16, 15, 7, 11, 4];
+
+        for v in &deletes {
+            assert_eq!(tree.remove(v), Some(*v));
+        }
+
+        tree.print();
+        assert_eq!(tree.remove(&9), Some(9));
+        assert_eq!(tree.get(&9), None);
+        tree.print();
+
+        for v in &to_deletes {
+            assert_eq!(tree.remove(v), Some(*v));
+        }
+
+        vec.retain(|x| !deletes.contains(x) && !to_deletes.contains(x));
+        for v in &vec {
+            assert_eq!(tree.get(v), None);
+        }
+    }
 
     // use rand::seq::SliceRandom;
     // use rand::thread_rng;
